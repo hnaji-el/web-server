@@ -8,7 +8,7 @@ CC = c++
 all: $(NAME)
 
 $(NAME): $(SRC) 
-	$(CC)  $(SRC) -o $(NAME)
+	$(CC) $(FLAG) $(SRC) -o $(NAME)
 
 
 clean:
