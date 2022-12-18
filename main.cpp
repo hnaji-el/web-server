@@ -14,21 +14,23 @@
 #include <netinet/ip.h>
 #include <sys/stat.h>
 #include <unistd.h> // read(), write(), close()
+#include <utility>
 #include <vector>
+#include <map>
 #define PORT 3333
-#define BUFF_SIZE 10000
+#define BUFF_SIZE 10
 // #define PORT 222
 #define SA struct sockaddr
 
-class request {
+class request_data {
 public:
-	int fd;
 	std::string file_name;
 	bool finished;
 
 public:
-	request(int fd)
-			: fd(fd), file_name("file" + std::to_string(fd)), finished(false) {}
+	request_data(){}
+	request_data(int fd)
+			: file_name("file" + std::to_string(fd)), finished(false) {}
 };
 
 class server {
@@ -71,42 +73,66 @@ int main() {
 	cli_addr_len = sizeof(cli_addr);
 
 	fd_set current_sockets, ready_sockets;
+	fd_set write_set, read_set;
 	FD_ZERO(&current_sockets);
 	FD_SET(s.sock_fd, &current_sockets);
-	std::vector<request> v_req;
+	std::map<int, request_data> request;
+	int fd_input = -1;
 	while (1) {
 		ready_sockets = current_sockets;
-		select(FD_SETSIZE, &ready_sockets, NULL, NULL, NULL);
-		for (int i = 0; i < FD_SETSIZE; i++) {
+		write_set = current_sockets;
+		read_set = current_sockets;
+		select(FD_SETSIZE, &read_set, &write_set, NULL, NULL);
 
-			if (FD_ISSET(i, &ready_sockets))
+		for (int i = 0; i < FD_SETSIZE; i++) {
+			if (FD_ISSET(i, &read_set))
 			{
 				if (i == s.sock_fd)
 				{
 					printf("HELLO\n");
 					int conn_fd = accept(s.sock_fd, (SA *)&cli_addr, &cli_addr_len);
-					v_req.push_back(request(conn_fd));
+					request[conn_fd] = request_data(conn_fd);
 					FD_SET(conn_fd, &current_sockets);
 				}
 				else {
 					bzero(buff, BUFF_SIZE);
-					// printf("CONNECTION ESTABLISHED\n");
-					if (read(i, buff, BUFF_SIZE) < 0) {
-						printf("ERROR READ");
-						exit(1);
-					}
-					char hello[100] = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 12\n\nHello world!";
-														
-					if (std::string(buff).find("lll") != std::string::npos)
+					if (!request[i].finished)
 					{
-						
-						write(i, hello, strlen(hello));
+						if (read(i, buff, BUFF_SIZE) < 0) {
+							printf("ERROR READ");
+							exit(1);
+						}
+						if(std::string(buff).find("lll") != std::string::npos)
+							request[i].finished = true;
 					}
 				}
 			}
+			if (request[i].finished)
+				printf("A\n");
+			if (FD_ISSET(i, &write_set) && request[i].finished)
+			{
+					char hello[100] = "HTTP/1.1 200 OK\nContent-Type: "
+								"text/plain\nContent-Length: 200\n\n";
+														// char write_buff[BUFF_SIZE];								
+					if (fd_input == -1)
+					{
+						write(i, hello, strlen(hello));
+						fd_input = open("smallfile",  O_RDONLY);
+					}
+
+					char write_buff[21];
+					bzero(write_buff, 21);
+					if(read(fd_input, write_buff, 20) < 0)
+						printf("READ ERROR\n");
+					if(write(i, write_buff, 20) < 0)
+						printf("WRITE ERROR\n");					
+					if(std::string(write_buff).find("lll") != std::string::npos)
+					{
+						request[i].finished = false;
+						fd_input = -1;
+					}
+			}
 		}
-		// printf("%s\n",buff);
-		// write(file_fd, buff, BUFF_SIZE);
 	}
 
 	return 0;
