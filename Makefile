@@ -1,6 +1,6 @@
 NAME = webserv
 
-SRC = ./main.cpp ./utils.cpp
+SRC = ./main.cpp ./utils.cpp ./request_data.cpp ./server.cpp
 
 
 FLAG =  -Wall -Wextra -Werror -std=c++98

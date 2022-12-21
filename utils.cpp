@@ -1,3 +1,4 @@
+// #pragma once
 #include "utils.hpp"
 std::string random_string()
 {
@@ -10,9 +11,11 @@ std::string random_string()
         result = result + alpha[rand() % 26];
     return result;
 }
-void    clear_file(request_data &req);
+void    clear_file(std::string &filename)
 {
-    (void)filename;
-    // std::ofstream file(filename);
-    // file << "";
+    // (void)req;
+    std::ofstream ofs;
+    ofs.open(filename, std::ofstream::out | std::ofstream::trunc);
+    ofs << "";
+    // ofs.close();
 }

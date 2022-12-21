@@ -1,6 +1,5 @@
 #pragma once
 #include <iostream>
-#include<fstream>
-#include "main.cpp"
+#include "request_data.hpp"
 std::string random_string();
-void    clear_file(request_data &req);
+void    clear_file(std::string &filename);
