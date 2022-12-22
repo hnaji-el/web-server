@@ -15,11 +15,11 @@ server::server(int port) :port(port)
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = inet_addr("0.0.0.0");
     serv_addr.sin_port = htons(this->port);
-
     if ((bind(this->sock_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) != 0) {
             std::cout << "BIND: " << std::strerror(errno) << '\n';
         exit(1);
     }
+
     if ((listen(this->sock_fd, 5)) != 0) {
         std::cout << "FAILED LISTEN" << std::endl;
         exit(1);

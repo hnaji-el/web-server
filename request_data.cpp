@@ -2,7 +2,7 @@
 
 request_data::request_data(){}
 request_data::request_data(int fd)
-        : finished(false),fd(fd), res_file_fd(-1) , res_started(false)
+        : started(false), finished(false),fd(fd), res_file_fd(-1) , res_started(false)
 {
 
     // std::cout << "filename:" << this->req_file << std::endl;
@@ -19,9 +19,11 @@ request_data &request_data::operator=(const request_data& a)
 {
     // (void)a;
     std::cout << "OPERATOR\n";
-    this->fd = a.fd;
+    this->started = a.started;
     this->finished = a.finished;
-    // this->req_file = a.req_file;
+    this->fd = a.fd;
     this->res_file_fd = a.res_file_fd;
+    this->res_started = a.res_started;
+    // this->req_file = a.req_file;
     return *this;
 }
