@@ -11,6 +11,11 @@ server::server(int port) :port(port)
         exit(0);
     } else
         printf("Socket successfully created..\n");
+    if (fcntl(this->sock_fd, F_SETFL, O_NONBLOCK) < 0)
+    {
+        printf("FCNTL FAILURE\n");
+        exit(1);
+    }
     bzero(&serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = inet_addr("0.0.0.0");

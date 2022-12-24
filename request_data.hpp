@@ -5,9 +5,10 @@
 class request_data
 {
     public:
-        // std::string req_file;
-        // int req_file_fd;
-        std::ofstream req_file;
+
+        // std::ofstream req_file;
+        unsigned long long loop;
+        int req_file_fd;
         bool started;
         bool finished;
         int fd;

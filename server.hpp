@@ -2,7 +2,7 @@
 #include <netinet/ip.h>
 #include <iostream>
 #include <arpa/inet.h>
-
+#include <fcntl.h>
 class server {
 	public:
 		int port;
