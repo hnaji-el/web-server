@@ -1,45 +1,37 @@
 // #pragma once
-#include "request_data.hpp"
-#include "utils.hpp"
-#include <cstdlib>
-#include <fstream>
+#include "./request_data.hpp"
+#include "./utils.hpp"
+#include "./server.hpp"
+#include "./parseConfigFile/parseConfigFile.hpp"
+
 #include <cstdio>
-#include <arpa/inet.h>
-#include <exception>
-#include <iterator>
 #include <string>
-#include <strings.h>
-#include <sys/fcntl.h>
 #include <sys/select.h>
-#include <cerrno>
-#include <sys/_select.h>
 #include <algorithm>
 #include <sys/socket.h>
 #include <fcntl.h>
 #include <iostream>
-#include <netinet/ip.h>
-#include <sys/stat.h>
-#include <unistd.h> // read(), write(), close()
-#include <utility>
-#include <vector>
-#include <map>
-#include "server.hpp"
-#define PORT 3333
-#define BUFF_SIZE 1024
-#define BIGFILE_SIZE 104857603
-#define MEDIUMFILE_SIZE 52428803
-#define SMALLFILE_SIZE 200
+#include <unistd.h> 
+#include <sys/types.h>
 
-int main() {
+#define BUFF_SIZE 1024
+
+int main(int argc, char** argv)
+{
+	std::vector<ServerData>	cData;
+
+	if (parseConfigFile(argc, argv, cData) == -1)
+		return (EXIT_FAILURE);
+
 	// getting servers from config file
 	std::vector<server> s;
-	s.push_back(server(3333));
-	s.push_back(server(5555));
+	for (size_t i = 0; i < cData.size(); i++)
+		s.push_back(server(cData[i]));
 
 	// servers sockets to add to set
 	std::vector<int> servers_socks;
-	for (std::vector<server>::iterator it = s.begin(); it != s.end(); it++)
-		servers_socks.push_back((*it).sock_fd);
+	for (size_t i = 0; i < s.size(); i++)
+		servers_socks.push_back(s[i].sock_fd);
 
 	// buffer for request read/writing and reponse file reading
 	char buff[BUFF_SIZE];
@@ -47,18 +39,22 @@ int main() {
 	int read_n = 0;
 	fd_set current_sockets,write_set, read_set;
 	FD_ZERO(&current_sockets);
-	for (std::vector<int>::iterator it = servers_socks.begin(); it != servers_socks.end(); it++)
+	for (size_t i = 0; i < servers_socks.size(); i++)
 	{
-		// printf("A\n");
-		FD_SET(*it, &current_sockets);
+		FD_SET(servers_socks[i], &current_sockets);
+		printf("socket = %d\n", servers_socks[i]);
 	}
-	std::map<int, request_data> request;
+	printf("size = %lu\n", servers_socks.size());
+
+	std::map<int, request_data> request; // ------------->
+
 	int max_fd = *std::max_element(servers_socks.begin(), servers_socks.end());
 	while (1) 
 	{
 		write_set = read_set = current_sockets;
 		select(FD_SETSIZE, &read_set, &write_set, NULL, NULL);
-		for (int i = 0; i <= max_fd; i++) {
+		for (int i = 0; i <= max_fd; i++)
+		{
 			// printf("X\n");
 			if (FD_ISSET(i, &read_set) && !request[i].res_started)
 			{
@@ -80,6 +76,7 @@ int main() {
 					bzero(buff, BUFF_SIZE);
 					if (!request[i].finished)
 					{
+						// parsing(request[i], buff); ========>
 						if (!request[i].started)
 						{
 							// usleep(1000000);
@@ -119,30 +116,35 @@ int main() {
 			if (FD_ISSET(i, &write_set) && request[i].finished)
 			{
 
+
+
+					// handle_response(match_server(request[i]), );
 					// printf("RESPONSE\n");
 					if (!request[i].res_started)
 					{
+
 
 						char hello[100] = "HTTP/1.1 200 OK\nContent-Type: "
 								"text/plain\nContent-Length: 52428803\n\n";
 						if (send(i, hello, strlen(hello), 0) == -1)
 						{
 							printf("SEND FAILURE\n");
-							exit(0);
+							exit(EXIT_FAILURE);
 						}
 						request[i].res_file_fd = open("mediumfile",  O_RDONLY);
 						request[i].res_started = true;
 						// printf("HEADER\n");
 					}
+
 					bzero(buff, BUFF_SIZE);
 					if((read_n = read(request[i].res_file_fd, buff, BUFF_SIZE)) < 0)
 						printf("READ ERROR\n");
 
-					printf("SEND<<<<<<<<<<\n");
-					printf("%d\n", i);
-					if(write(i, buff, read_n) < i)
+					if(send(i, buff, read_n, 0) < -1)
+					{
+						printf("%d\n",read_n);
 						printf("WRITE ERROR\n");
-					printf("SEND>>>>>>>>>>>\n");
+					}
 					// printf("read_n = %d\n", read_n);
 					if (read_n < BUFF_SIZE)
 					{

@@ -6,15 +6,18 @@ class request_data
 {
     public:
 
-        // std::ofstream req_file;
-        unsigned long long loop;
-        int req_file_fd;
         bool started;
         bool finished;
-        int fd;
+        bool res_started;
+        int fd; // sock_fd
+        // std::ofstream req_file;
+        // ============== mmap header
+        // ============== ofstream fl;
+        int req_file_fd;
         int res_file_fd;
         std::string req_file_name;
-        bool res_started;
+        unsigned long long loop;
+        
     public:
         request_data();
         request_data(int fd);

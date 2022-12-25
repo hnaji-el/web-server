@@ -2,7 +2,7 @@
 
 request_data::request_data(){}
 request_data::request_data(int fd)
-        : loop(0),started(false), finished(false),fd(fd), res_file_fd(-1) , res_started(false)
+        : started(false), finished(false),res_started(false), fd(fd), res_file_fd(-1), loop(0)
 {}
 
 request_data &request_data::operator=(const request_data& a)

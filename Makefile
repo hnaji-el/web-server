@@ -1,20 +1,28 @@
+
 NAME = webserv
 
-SRC = ./main.cpp ./utils.cpp ./request_data.cpp ./server.cpp
+SRCS = main.cpp ./utils.cpp ./request_data.cpp ./server.cpp \
+	   ./parseConfigFile/Parser.cpp ./parseConfigFile/Lexer.cpp ./parseConfigFile/Token.cpp \
+	   ./parseConfigFile/ServerData.cpp ./parseConfigFile/parseConfigFile.cpp
 
+HEADERS = ./parseConfigFile/Parser.hpp ./parseConfigFile/Lexer.hpp ./parseConfigFile/Token.hpp \
+		  ./parseConfigFile/Exceptions.hpp ./parseConfigFile/ServerData.hpp \
+		  ./parseConfigFile/parseConfigFile.hpp
 
-FLAG =  -Wall -Wextra -Werror -std=c++98
-CC = c++ 
+COMPILER = c++
+
+FLAGS = -std=c++98 -Wall -Wextra -Werror
+
 all: $(NAME)
 
-$(NAME): $(SRC) 
-	$(CC) $(FLAG) $(SRC) -o $(NAME)
-
+$(NAME): $(SRCS) $(HEADERS)
+	$(COMPILER) $(FLAGS) $(SRCS) -o $(NAME)
 
 clean:
-	echo -n
+	rm -rf $(NAME)
 
 fclean: clean
-	rm -f $(NAME)
 
 re: fclean all
+
+.PHONY: all clean fclean re

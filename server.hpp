@@ -1,12 +1,17 @@
+#include "parseConfigFile/ServerData.hpp"
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <iostream>
 #include <arpa/inet.h>
 #include <fcntl.h>
-class server {
+#include "parseConfigFile/ServerData.hpp"
+#include <cstdio>
+#include <cstring>
+#include <sys/errno.h>
+class server
+{
 	public:
-		int port;
 		int sock_fd;
 	public:
-		server(int port);
+		server(const ServerData &Data);
 };

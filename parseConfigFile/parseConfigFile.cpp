@@ -3,7 +3,7 @@
 
 int	parseConfigFile(int argc, char** argv, std::vector<ServerData>& cData)
 {
-	std::string	defPath = "/Users/mac/Desktop/Webserv/parseConfigFile/configFileExamples/simple_config.conf";
+	std::string	defPath = "./configFileExamples/simple_config.conf";
 
 	if (argc == 2)
 		defPath = argv[1];
@@ -28,4 +28,3 @@ int	parseConfigFile(int argc, char** argv, std::vector<ServerData>& cData)
 
 	return (0);
 }
-

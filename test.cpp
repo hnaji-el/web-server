@@ -1,24 +1,15 @@
-#include <cstdint>
-#include <fstream>
-#include <unistd.h>
-#include <iostream>
-int main () {
-   std::ofstream ofs;
-   ofs.open("test.txt", std::ofstream::out);
-   while(1)
-   {
-      ofs << "HELLO\n";
-      ofs.flush();
-   }
-   // ofs.open("test.txt", std::ofstream::out | std::ofstream::trunc);
-   // ofs.close();
-   // ofs.open("test.txt", std::ofstream::out | std::ofstream::trunc);
-   std::ifstream infile("test.txt");
-   char b;
-   while(infile.get(b)) // much better !!
-   {
-      std::cout << b << std::endl;
-   }
-   // ofs.close();
-   return 0;
+#include <stdio.h>
+#include <netdb.h>
+
+
+int main(int argc, char *argv[])
+{
+    struct hostent *lh = gethostbyname("kubernetes.docker.internal");
+
+    if (lh)
+        puts(lh->h_addr_list[0]);
+    else
+        herror("gethostbyname");
+
+    return 0;
 }
