@@ -3,11 +3,13 @@ NAME = webserv
 
 SRCS = main.cpp ./utils.cpp ./server.cpp \
 	   ./parseConfigFile/Parser.cpp ./parseConfigFile/Lexer.cpp ./parseConfigFile/Token.cpp \
-	   ./parseConfigFile/ServerData.cpp ./parseConfigFile/parseConfigFile.cpp parseRequest/Request.cpp
+	   ./parseConfigFile/ServerData.cpp ./parseConfigFile/parseConfigFile.cpp parseRequest/Request.cpp \
+	   ./handleResponse/response.cpp
 
 HEADERS = ./parseConfigFile/Parser.hpp ./parseConfigFile/Lexer.hpp ./parseConfigFile/Token.hpp \
 		  ./parseConfigFile/Exceptions.hpp ./parseConfigFile/ServerData.hpp \
-		  ./parseConfigFile/parseConfigFile.hpp parseRequest/Request.hpp 
+		  ./parseConfigFile/parseConfigFile.hpp parseRequest/Request.hpp \
+		  ./handleResponse/response.hpp
 
 COMPILER = c++
 

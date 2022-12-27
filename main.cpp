@@ -3,6 +3,7 @@
 #include "./server.hpp"
 #include "./parseConfigFile/parseConfigFile.hpp"
 #include "./parseRequest/Request.hpp"
+#include "./handleResponse/response.hpp"
 
 #include <cstdio>
 #include <string>
@@ -90,13 +91,7 @@ int main(int argc, char** argv)
 			{
 				// handle_response(match_server(request[i]), );
 				// printf("RESPONSE\n");
-				char hello[100] = "HTTP/1.1 200 OK\nContent-Type: "
-						"text/html\nContent-Length: 11\n\nhello world";
-				if (send(i, hello, strlen(hello), 0) == -1)
-				{
-					printf("SEND FAILURE\n");
-					exit(EXIT_FAILURE);
-				}
+				handle_response(cData[0], request[i]);
 
 				// replace them with clear function ...
 				request[i].state = STARTED;
