@@ -55,7 +55,6 @@ int main(int argc, char** argv)
 		select(FD_SETSIZE, &read_set, &write_set, NULL, NULL);
 		for (int i = 0; i <= max_fd; i++)
 		{
-			// printf("X\n");
 			if (FD_ISSET(i, &read_set) && request[i].state == STARTED)
 			{
 				if (std::find(servers_socks.begin(), servers_socks.end(), i) != servers_socks.end())
@@ -74,7 +73,6 @@ int main(int argc, char** argv)
 				else
 				{
 					bzero(buff, BUFF_SIZE);
-					// parsing(request[i], buff); ========>
 					if ((read_n = read(i, buff, BUFF_SIZE)) <= 0)
 					{
 						printf("READ <= 0\n");
@@ -89,18 +87,10 @@ int main(int argc, char** argv)
 			}
 			if (FD_ISSET(i, &write_set) && request[i].state == FINISHED)
 			{
-				// handle_response(match_server(request[i]), );
-				// printf("RESPONSE\n");
+				// Need to match server ...
 				handle_response(cData[0], request[i]);
-
-				// replace them with clear function ...
-				request[i].state = STARTED;
-				request[i].headers.clear();
-				request[i].buffer.clear();
-				// ...
+				request[i].clear();
 			}
-			// printf("EXIT OUTSIDE\n");
-			// exit(1);
 		}
 	}
 
