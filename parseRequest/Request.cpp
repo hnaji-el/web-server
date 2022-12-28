@@ -3,14 +3,16 @@
 
 Request::Request(void)
 	: headers(), state(STARTED), fileName("./configFileExamples/temp/file"),
-	fd(-1), fileStream(), flag(HEADERS), contentLen(0), ActualContentLen(0),
+	fd(-1), resFlag(HEADERNOTSENT), resState(BODYNOTSENT), fdBody(-1),
+	fileStream(), flag(HEADERS), contentLen(0), ActualContentLen(0),
 	pos(0), buffer()
 {
 }
 
 Request::Request(const int& fd)
 	: headers(), state(STARTED), fileName("./configFileExamples/temp/file"),
-	fd(fd), fileStream(), flag(HEADERS), contentLen(0), ActualContentLen(0),
+	fd(fd), resFlag(HEADERNOTSENT), resState(BODYNOTSENT), fdBody(-1),
+	fileStream(), flag(HEADERS), contentLen(0), ActualContentLen(0),
 	pos(0), buffer()
 {
 }
@@ -21,6 +23,9 @@ Request::Request(const Request& src)
 	this->state = src.state;
 	this->fileName = src.fileName;
 	this->fd = src.fd;
+	this->resFlag = src.resFlag;
+	this->resState = src.resState;
+	this->fdBody = src.fdBody;
 	this->flag = src.flag;
 	this->contentLen = src.contentLen;
 	this->ActualContentLen = src.ActualContentLen;
@@ -37,6 +42,9 @@ Request&	Request::operator=(const Request& rhs)
 	this->state = rhs.state;
 	this->fileName = rhs.fileName;
 	this->fd = rhs.fd;
+	this->resFlag = rhs.resFlag;
+	this->resState = rhs.resState;
+	this->fdBody = rhs.fdBody;
 	this->flag = rhs.flag;
 	this->contentLen = rhs.contentLen;
 	this->ActualContentLen = rhs.ActualContentLen;
@@ -52,12 +60,7 @@ Request::~Request(void)
 
 void	Request::clear(void)
 {
-	this->headers.clear();
-	this->state = STARTED;
-	this->fileName = "./configFileExamples/temp/file";
-	this->flag = HEADERS;
-	this->contentLen = this->ActualContentLen = this->pos = 0;
-	this->buffer.clear();
+	*this = Request(this->fd);
 }
 
 /*
@@ -172,13 +175,9 @@ const char*	Request::setState(State state)
 
 void	Request::setFileName(void)
 {
-	static int		count = 0;
-	int				nb = 0;
-	const size_t	sz = this->fileName.size();
-
-	if (count == std::numeric_limits<int>::max())
-		count = 0;
-	nb = ++count;
+	static unsigned int	count = 0;
+	unsigned int		nb = ++count;
+	const size_t		sz = this->fileName.size();
 
 	for (; nb != 0; nb = nb / 10)
 	    this->fileName.insert(sz, 1, nb % 10 + '0');

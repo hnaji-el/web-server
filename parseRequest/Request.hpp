@@ -21,6 +21,18 @@ enum Flag
 	BODYCHUNKED
 };
 
+enum ResFlag
+{
+	HEADERSENT,
+	HEADERNOTSENT
+};
+
+enum ResState
+{
+	BODYSENT,
+	BODYNOTSENT
+};
+
 class Request
 {
 /*DATA MEMBERS*/
@@ -29,6 +41,10 @@ public:
 	State								state;    // state of the object
 	std::string							fileName; // To store request body
 	int									fd;       // fd 
+	// Response states and flags
+	ResFlag								resFlag;
+	ResState							resState;
+	int									fdBody;
 private:
 	std::ofstream	fileStream;
 	Flag			flag;

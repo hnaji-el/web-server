@@ -88,8 +88,21 @@ int main(int argc, char** argv)
 			if (FD_ISSET(i, &write_set) && request[i].state == FINISHED)
 			{
 				// Need to match server ...
-				handle_response(cData[0], request[i]);
-				request[i].clear();
+				if (request[i].resFlag == HEADERNOTSENT)
+					handle_response(cData[0], request[i]);
+				if (request[i].resState == BODYNOTSENT)
+				{
+					char buff[10001];
+					bzero(&buff, 10001);
+					int r = read(request[i].fdBody, buff, 10000);
+					write(i, buff, r);
+					// reading from the bodyPath and write ...
+				}
+				if (request[i].resState == BODYSENT)
+				{
+					request[i].clear();
+					close(request[i].fdBody);
+				}
 			}
 		}
 	}

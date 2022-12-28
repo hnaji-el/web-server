@@ -10,6 +10,8 @@
 #include <vector>
 #include <cstring>
 #include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "../parseConfigFile/parseConfigFile.hpp"
 #include "../parseRequest/Request.hpp"
 
@@ -31,10 +33,9 @@ class response{
         std::string get_body(std::string path_file);
         std::string get_content_type(std::string path_file);
     public:
-        response(const LocationData &location, Request my_request):location(location){
-            // fill request.
-            this->req = my_request;
-
+        response(const LocationData &location, Request& my_request)
+			: req(my_request), location(location)
+		{
             // fill errors.
             message_status.insert(std::make_pair(400,"Bad Request"));
             message_status.insert(std::make_pair(414,"Request-URI Too Long"));
@@ -51,13 +52,13 @@ class response{
         };
         ~response(){};
 
-        Request                   req;
+        Request&                   req;
         std::map<int,std::string> message_status;
         std::map<std::string,std::string> content_types;
         const LocationData                location;
         std::string                 root;
 
-        bool        request_valid(Request req, long max_body_size);
+        bool        request_valid(Request& req, long max_body_size);
         bool        check_location_config_file(std::pair<unsigned short,std::string> redirection);
         bool        method_allowed(std::string method);
         bool        resource_root();
@@ -73,6 +74,6 @@ class response{
 
 
 LocationData    get_location(ServerData server, Request &my_request);
-void            handle_response(ServerData server, Request my_request);
+void            handle_response(ServerData& server, Request& my_request);
 
 #endif

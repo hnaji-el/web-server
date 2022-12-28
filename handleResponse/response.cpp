@@ -195,15 +195,20 @@ void       response::set_response_file(int code)
     std::string response;
     data_response data;
     
-    data.body = get_body(this->root);
+    data.body = get_body(this->root); // TODO: remove
     data.request_line = "HTTP/1.1 " + std::to_string(code) + " " + this->message_status[code];
     data.headers.content_length = std::to_string(data.body.length());
     data.headers.content_type = get_content_type(this->root);
     
     response+= data.request_line + "\r\n" + 
                "Content-Length: " + data.headers.content_length + "\r\n" + "Content-Type: " + data.headers.content_type + 
-               "\r\n\r\n" + data.body;
+               "\r\n\r\n";
 	write(this->req.fd, response.c_str(), response.size());
+	this->req.resFlag = HEADERSENT;
+	this->req.fdBody = open(this->root.c_str(), O_RDONLY);
+	std::cout << this->req.fdBody << std::endl;
+	std::cout << data.body << std::endl;
+	std::cout << this->root << std::endl;
 }
 
 void    response::set_response_auto_index(int code,std::string body)
@@ -234,7 +239,7 @@ void    response::set_response_auto_index(int code,std::string body)
 
 
 
-bool    response::request_valid(Request req,long)
+bool    response::request_valid(Request& req,long)
 {
     if(req.headers["uri"].find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=%") != std::string::npos)
 	{
@@ -674,7 +679,7 @@ void    response::POST_method()
 }
 
 
-void    handle_response(ServerData server, Request my_request)
+void    handle_response(ServerData& server, Request& my_request)
 {
     response res(get_location(server, my_request),my_request);
     if(res.request_valid(res.req, server.limitSize))
