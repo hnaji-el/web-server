@@ -33,6 +33,8 @@ void	Parser::fillServerTable(void)
 	this->_serverTable["root"] = &Parser::parserParseRoot;
 	this->_serverTable["index"] = &Parser::parserParseIndex;
 	this->_serverTable["autoindex"] = &Parser::parserParseAutoindex;
+	this->_serverTable["return"] = &Parser::parserParseReturn;
+	this->_serverTable["upload_path"] = &Parser::parserParseUploadPath;
 	this->_serverTable["location"] = &Parser::parserParseLocation;
 }
 
@@ -44,6 +46,8 @@ void	Parser::fillLocationTable(void)
 	this->_locationTable["root"] = &Parser::parserParseRootLoc;
 	this->_locationTable["index"] = &Parser::parserParseIndexLoc;
 	this->_locationTable["autoindex"] = &Parser::parserParseAutoindexLoc;
+	this->_locationTable["return"] = &Parser::parserParseReturnLoc;
+	this->_locationTable["upload_path"] = &Parser::parserParseUploadPathLoc;
 }
 
 /*
@@ -158,7 +162,6 @@ void	Parser::parserParseServerName(ServerData& serData)
 
 	this->expectedToken(TOKEN_WORD);
 	serData.serverName.push_back(this->_prevToken.value);
-
 	while (this->_curToken.type == TOKEN_WORD)
 	{
 		this->expectedToken(TOKEN_WORD);
@@ -258,6 +261,31 @@ void	Parser::parserParseAutoindex(ServerData& serData)
 	this->expectedToken(TOKEN_EOL);
 }
 
+void	Parser::parserParseReturn(ServerData& serData)
+{
+	long	num = 0;
+
+	this->isDirectiveDuplicate(this->_numOfCallS, "return");
+
+	this->expectedToken(TOKEN_WORD);
+	num = this->checkAndGetNumber(this->_prevToken.value);
+	if (num != 301)
+		throw SyntaxError(this->_prevToken.value);
+	this->expectedToken(TOKEN_WORD);
+	serData.redirect = std::make_pair(num, this->_prevToken.value);
+
+	this->expectedToken(TOKEN_EOL);
+}
+
+void	Parser::parserParseUploadPath(ServerData& serData)
+{
+	this->isDirectiveDuplicate(this->_numOfCallS, "upload_path");
+
+	this->expectedToken(TOKEN_WORD);
+	serData.uploadPath = this->_prevToken.value;
+	this->expectedToken(TOKEN_EOL);
+}
+
 /*
  * Parse directives of Location block
  */
@@ -345,6 +373,31 @@ void	Parser::parserParseAutoindexLoc(LocationData& locData)
 	if (this->_prevToken.value != "on")
 		throw SyntaxError(this->_prevToken.value);
 	locData.autoindex = true;
+	this->expectedToken(TOKEN_EOL);
+}
+
+void	Parser::parserParseReturnLoc(LocationData& locData)
+{
+	long	num = 0;
+
+	this->isDirectiveDuplicate(this->_numOfCallL, "return");
+
+	this->expectedToken(TOKEN_WORD);
+	num = this->checkAndGetNumber(this->_prevToken.value);
+	if (num != 301)
+		throw SyntaxError(this->_prevToken.value);
+	this->expectedToken(TOKEN_WORD);
+	locData.redirect = std::make_pair(num, this->_prevToken.value);
+
+	this->expectedToken(TOKEN_EOL);
+}
+
+void	Parser::parserParseUploadPathLoc(LocationData& locData)
+{
+	this->isDirectiveDuplicate(this->_numOfCallL, "upload_path");
+
+	this->expectedToken(TOKEN_WORD);
+	locData.uploadPath = this->_prevToken.value;
 	this->expectedToken(TOKEN_EOL);
 }
 

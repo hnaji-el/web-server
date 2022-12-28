@@ -55,6 +55,8 @@ public:
 	void	parserParseRoot(ServerData& serData);
 	void	parserParseIndex(ServerData& serData);
 	void	parserParseAutoindex(ServerData& serData);
+	void	parserParseReturn(ServerData& serData);
+	void	parserParseUploadPath(ServerData& serData);
 
 	// parse directives of Location block
 	void	parserParseErrorPageLoc(LocationData& locData);
@@ -63,6 +65,8 @@ public:
 	void	parserParseRootLoc(LocationData& locData);
 	void	parserParseIndexLoc(LocationData& locData);
 	void	parserParseAutoindexLoc(LocationData& locData);
+	void	parserParseReturnLoc(LocationData& locData);
+	void	parserParseUploadPathLoc(LocationData& locData);
 
 	// HELPER member function
 	void	expectedToken(TokenType type);
