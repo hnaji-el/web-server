@@ -2,7 +2,14 @@
 #include "response.hpp"
 #include <unistd.h>
 
-std::string response::get_body_res_page(int code)
+/* ---- TODO ---- 
+    - check contentLen or Content-Length of request.
+    - change contentLen and ActualeLen to public.
+    - location has a cgi.
+    - check error pages 
+*/
+
+std::string response::get_error_page(int code)
 {
     if(this->location.statusCode.count(code))
     {
@@ -11,6 +18,7 @@ std::string response::get_body_res_page(int code)
         std::string             temp = location.statusCode[code];
         std::vector<char *>     list_locations;
         char                    *token = strtok ((char*)temp.c_str(),"/");
+        struct stat             buff;
 
         // fill_tokens.
         if(token)
@@ -27,11 +35,14 @@ std::string response::get_body_res_page(int code)
             path += (std::string)list_locations[i] + "/";
         }
         path = path.substr(0, path.size()-1);
-        std::string body = get_body(path);
-        if(body.length())
-            return body;
+        if(lstat(path.c_str(),&buff) == 0)
+            return path;
     }
-   
+    return "";
+}
+
+std::string response::get_body_res_page(int code)
+{  
    std::string body = "<!DOCTYPE html>\n"\
 "<html lang=\"en\">\n"\
 "<head>\n"\
@@ -110,18 +121,40 @@ void    response::set_response_error(int code)
         std::string     body;
     } data_response;
 
-    std::string response;
+    std::string headers;
+    std::string error_page;
     data_response data;
 
-    data.body = get_body_res_page(code);
-    data.request_line = "HTTP/1.1 " + std::to_string(code) + " " + this->message_status[code];
-    data.headers.content_length = std::to_string(data.body.length());
-    data.headers.content_type = "text/html";
+    error_page = get_error_page(code);
+    if(!error_page.length())
+        data.body = get_body_res_page(code);
     
-    response+= data.request_line + '\r' + '\n' + 
-               "Content-Length: " + data.headers.content_length + '\r' + '\n' + "Content-Type: " + data.headers.content_type + 
-               '\r' + '\n' + '\n' + data.body + '\r' + '\n' + '\r' + '\n';
-    std::cout << response << std::endl;
+    data.request_line = "HTTP/1.1 " + std::to_string(code) + " " + this->message_status[code];
+    if(error_page.length())
+    {
+        data.headers.content_length = get_content_length(error_page);
+        data.headers.content_type = get_content_type(error_page);
+    }
+    else
+    {
+        data.headers.content_length = std::to_string(data.body.length());
+        data.headers.content_type = "text/html";
+    }
+
+    headers+= data.request_line + "\r\n" +
+               "Content-Length: " + data.headers.content_length + "\r\n" + "Content-Type: " + data.headers.content_type + 
+               "\r\n\r\n";
+	write(this->req.fd, headers.c_str(), headers.size());
+	this->req.resFlag = HEADERSENT;
+    if(error_page.length())
+    {
+	    this->req.fdBody = open(error_page.c_str(), O_RDONLY);
+    }
+    else
+    {
+        write(this->req.fd, data.body.c_str(), data.body.size());
+        this->req.resState = BODYSENT;
+    }
 }
 
 void    response::set_response_permanently(int code,std::string redirection = "")
@@ -135,7 +168,7 @@ void    response::set_response_permanently(int code,std::string redirection = ""
         std::string     body;
     } data_response;
 
-    std::string response;
+    std::string headers;
     data_response data;
 
     data.request_line = "HTTP/1.1 " + std::to_string(code) + " " + this->message_status[code];
@@ -145,12 +178,13 @@ void    response::set_response_permanently(int code,std::string redirection = ""
     else
         data.headers.location += this->req.headers["uri"] + "/";
     data.body = get_body_res_page(code);
-    
-    response+= data.request_line + '\r' + '\n' +
-    data.headers.location + '\r' + '\n' + '\n' + data.body + '\r' + '\n' + '\r' + '\n';
 
-    std::cout << response << std::endl;
-
+    headers+= data.request_line + "\r\n" +
+               data.headers.location +  "\r\n\r\n";
+	write(this->req.fd, headers.c_str(), headers.size());
+	this->req.resFlag = HEADERSENT;
+    write(this->req.fd, data.body.c_str(), data.body.size());
+    this->req.resState = BODYSENT;
 }
 
 std::string response::get_content_type(std::string path_file)
@@ -180,6 +214,20 @@ std::string response::get_body(std::string path_file)
     return body;
 }
 
+std::string response::get_content_length(std::string file)
+{
+    FILE* fp = fopen(file.c_str(), "r");
+
+    if(fp != NULL)
+    {
+        fseek(fp, 0, SEEK_END);
+        long int res = ftell(fp);
+        fclose(fp);
+        return std::to_string(res);
+    }
+    return "";
+}
+
 void       response::set_response_file(int code)
 {
     typedef struct data_headers{
@@ -189,26 +237,21 @@ void       response::set_response_file(int code)
     typedef struct data_response{
         std::string     request_line;
         data_headers    headers;
-        std::string     body;
     } data_response;
 
-    std::string response;
+    std::string headers;
     data_response data;
-    
-    data.body = get_body(this->root); // TODO: remove
+
     data.request_line = "HTTP/1.1 " + std::to_string(code) + " " + this->message_status[code];
-    data.headers.content_length = std::to_string(data.body.length());
+    data.headers.content_length = get_content_length(this->root);
     data.headers.content_type = get_content_type(this->root);
     
-    response+= data.request_line + "\r\n" + 
+    headers+= data.request_line + "\r\n" +
                "Content-Length: " + data.headers.content_length + "\r\n" + "Content-Type: " + data.headers.content_type + 
                "\r\n\r\n";
-	write(this->req.fd, response.c_str(), response.size());
+	write(this->req.fd, headers.c_str(), headers.size());
 	this->req.resFlag = HEADERSENT;
 	this->req.fdBody = open(this->root.c_str(), O_RDONLY);
-	std::cout << this->req.fdBody << std::endl;
-	std::cout << data.body << std::endl;
-	std::cout << this->root << std::endl;
 }
 
 void    response::set_response_auto_index(int code,std::string body)
@@ -223,7 +266,7 @@ void    response::set_response_auto_index(int code,std::string body)
         std::string     body;
     } data_response;
 
-    std::string response;
+    std::string headers;
     data_response data;
     
     data.body = body;
@@ -231,16 +274,34 @@ void    response::set_response_auto_index(int code,std::string body)
     data.headers.content_length = std::to_string(data.body.length());
     data.headers.content_type = "text/html";
     
-    response+= data.request_line + '\r' + '\n' + 
-               "Content-Length: " + data.headers.content_length + '\r' + '\n' + "Content-Type: " + data.headers.content_type + 
-               '\r' + '\n' + '\n' + data.body + '\r' + '\n' + '\r' + '\n';
-    std::cout << response << std::endl;
+    headers+= data.request_line + "\r\n" +
+               "Content-Length: " + data.headers.content_length + "\r\n" + "Content-Type: " + data.headers.content_type + 
+               "\r\n\r\n";
+    write(this->req.fd, headers.c_str(), headers.size());
+	this->req.resFlag = HEADERSENT;
+    write(this->req.fd, data.body.c_str(), data.body.size());
+    this->req.resState = BODYSENT;
 }
 
 
 
-bool    response::request_valid(Request& req,long)
+bool    response::request_valid(Request& req,long max_body_size)
 {
+    if(req.headers["method"] != "GET" && req.headers["method"] != "POST" && req.headers["method"] != "DELETE")
+    {
+        set_response_error(501);
+        return false;
+    }
+    if(req.headers["method"] == "POST" && req.headers.count("Transfer-Encoding") && req.headers["Transfer-Encoding"] != "chunked")
+    {
+        set_response_error(501);
+        return false;
+    }
+    if((req.headers["method"] == "POST" && !req.headers.count("Content-Length")) /*|| (req.ActualContentLen > req.contentLen)*/)
+    {
+        set_response_error(400);
+        return false;
+    }
     if(req.headers["uri"].find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=%") != std::string::npos)
 	{
         set_response_error(400);
@@ -251,11 +312,12 @@ bool    response::request_valid(Request& req,long)
         set_response_error(414);
 		return false;
 	}
-//     if((long)req["Content-Length"].() > max_body_size)
-//     {
-//         set_response_error(413);
-//         return false;
-//     }
+    // if((long)req.contentLen > max_body_size)
+    // {
+    //     set_response_error(413);
+    //     return false;
+    // }
+    (void)max_body_size;
     return true;
 }
 
@@ -310,20 +372,18 @@ LocationData get_location(ServerData server, Request &my_request)
     return server_location;
 }
 
-bool        response::check_location_config_file(std::pair<unsigned short,std::string> redirection)
+bool        response::check_location_config_file()
 {
     if(!this->location.pathname.length())
     {
         set_response_error(404);
         return false;
     }
-    
-    // if(redirection.second.length())
-    // {
-    //     set_response_permanently(301,redirection.second);
-    //     return false;
-    // }
-    (void) redirection;
+    if(this->location.redirect.second.length())
+    {
+        set_response_permanently(301,this->location.redirect.second);
+        return false;
+    }
     return true;
 }
 
@@ -427,6 +487,34 @@ bool    response::is_auto_index()
     return true;
 }
 
+std::string response::get_previous(std::string path)
+{
+         std::string             temp = path;
+         std::string            new_path = "";
+         std::vector<char *>     list_locations;
+         char                    *token = strtok ((char*)temp.c_str(),"/");
+
+        if(token)
+            list_locations.push_back(token);
+        for (;token != NULL;)
+        {
+            token = strtok(NULL,"/");
+            if(token != NULL)
+                list_locations.push_back(token);       
+        }
+
+        for(size_t i = 0; i < list_locations.size() - 1; i++)
+        {
+            new_path += "/" + (std::string)list_locations[i] + "/";
+        }
+    if(new_path.length())
+    {
+        new_path = new_path.substr(0, new_path.size()-1);
+        return new_path;
+    }
+    return "/";
+}
+
 std::string response::get_auto_index_directory()
 {
 	std::string body;
@@ -441,15 +529,28 @@ std::string response::get_auto_index_directory()
     {
         while ((dir = readdir(d)) != NULL)
         {
-			if(strcmp(dir->d_name,".") != 0 && strcmp(dir->d_name,"..") != 0 && strcmp(dir->d_name,".git") != 0)
-			list_files.push_back(dir->d_name);
+			if(strcmp(dir->d_name,".") != 0 && strcmp(dir->d_name,".git") != 0)
+            {
+                if(strcmp(dir->d_name,"..") == 0)
+                {
+                    if(this->location.root + "/" != this->root)
+                        list_files.push_back(dir->d_name);
+                }
+                else
+                    list_files.push_back(dir->d_name);
+            }
         }
         closedir(d);
     }
 
 	for (size_t i = 0; i < list_files.size(); i++)
 	{
-		links+= "    <a href=\"#\">" + list_files[i] + "</a>\n";
+        std::string path = this->req.headers["Host"];
+        if(list_files[i] == "..")
+            path += get_previous(this->req.headers["uri"]);
+        else
+            path += this->req.headers["uri"] + list_files[i];
+		links+= "    <a href= http://" + path +  ">" + list_files[i] + "</a><br>";
 	}
 
 	body = "<!DOCTYPE html>\n"\
@@ -464,6 +565,8 @@ std::string response::get_auto_index_directory()
 "    </style>\n"\
 "</head>\n"\
 "<body>\n"\
+"<h1>Auto Index</h1>\n"\
+"<hr>\n"\
 + links + "\n"\
 "</body>\n"\
 "</html>";
@@ -684,7 +787,7 @@ void    handle_response(ServerData& server, Request& my_request)
     response res(get_location(server, my_request),my_request);
     if(res.request_valid(res.req, server.limitSize))
     {
-        if(res.check_location_config_file(res.location.redirect))
+        if(res.check_location_config_file())
         {
             if(res.method_allowed(res.req.headers["method"]))
             {
