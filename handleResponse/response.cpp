@@ -62,6 +62,57 @@ std::string response::get_body_res_page(int code)
 	return body;
 }
 
+std::string response::get_body_post(int code)
+{
+    std::string body = "<!DOCTYPE html>\n"\
+"<html lang=\"en\">\n"\
+"<head>\n"\
+"    <meta charset=\"UTF-8\">\n"\
+"    <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n"\
+"    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"\
+"    <title>" + std::to_string(code) + " " + this->message_status[code] + "</title>\n"\
+"    <style>\n"\
+"        h1{text-align: center;}\n"\
+"    </style>\n"\
+"</head>\n"\
+"<body>\n"\
+"    <h1>" + std::to_string(code) + " " + this->message_status[code] +"</h1>\n"\
+"    <hr>\n"\
+"</body>\n"\
+"</html>";
+	return body;
+}
+
+void    response::set_response_page(int code)
+{
+    typedef struct data_headers{
+        std::string content_length;
+        std::string  content_type;
+    } data_headers;
+    typedef struct data_response{
+        std::string     request_line;
+        data_headers    headers;
+        std::string     body;
+    } data_response;
+
+    std::string headers;
+    data_response data;
+
+    data.body = get_body_post(code);
+    data.request_line = "HTTP/1.1 " + std::to_string(code) + " " + this->message_status[code];
+    data.headers.content_length = std::to_string(data.body.length());
+    data.headers.content_type = "text/html";
+    headers+= data.request_line + "\r\n" +
+            "Content-Length: " + data.headers.content_length + "\r\n" + "Content-Type: " + data.headers.content_type + 
+               "\r\n\r\n";
+    
+
+	write(this->req.fd, headers.c_str(), headers.size());
+	this->req.resFlag = HEADERSENT;
+    write(this->req.fd, data.body.c_str(), data.body.size());
+    this->req.resState = BODYSENT;
+}
+
 void    response::set_response_error(int code)
 {
     typedef struct data_headers{
@@ -250,7 +301,7 @@ bool    response::request_valid(Request& req,long max_body_size)
         set_response_error(501);
         return false;
     }
-    if((req.headers["method"] == "POST" && !req.headers.count("Content-Length")) /*|| (req.ActualContentLen != req.contentLen)*/)
+    if((req.headers["method"] == "POST" && !req.headers.count("Content-Length")) || (req.ActualContentLen != req.contentLen))
     {
         set_response_error(400);
         return false;
@@ -265,11 +316,11 @@ bool    response::request_valid(Request& req,long max_body_size)
         set_response_error(414);
 		return false;
 	}
-    // if((long)req.contentLen > max_body_size)
-    // {
-    //     set_response_error(413);
-    //     return false;
-    // }
+    if((long)req.contentLen > max_body_size)
+    {
+        set_response_error(413);
+        return false;
+    }
     (void)max_body_size;
     return true;
 }
@@ -389,7 +440,7 @@ bool    response::is_slash_in_end()
     return true;
 }
 
-bool    response::index_files()
+bool    response::get_index_files()
 {
     struct stat buff;
     std::string temp = this->root;
@@ -409,6 +460,16 @@ bool    response::index_files()
 
 bool    response::location_has_cgi()
 {
+    return false;
+}
+
+bool    response::post_location_has_cgi()
+{
+    if(location_has_cgi())
+    {
+        return true;
+    }
+    set_response_error(403);
     return false;
 }
 
@@ -624,6 +685,66 @@ void       response::fill_content_types()
 	this->content_types["avi"] = "video/x-msvideo";
 }
 
+bool response::index_files()
+{
+    if(get_index_files())
+        return true;
+    set_response_error(403);
+    return false;
+}
+
+bool    response::support_upload()
+{
+    std::string upload_path = this->location.uploadPath;
+    std::string file_name   = this->req.fileName;
+
+    struct stat buff;
+
+    if(upload_path.length())
+    {
+        if(lstat(upload_path.c_str(),&buff) == 0 && S_ISDIR(buff.st_mode))
+        {
+            std::string cmd = "mv " + file_name + " " + upload_path;
+            system(cmd.c_str());
+            set_response_page(201);
+            return true;
+        }
+        else
+            set_response_error(403);
+        }
+    return false;
+}
+
+void    response::POST_method()
+{
+    if(!support_upload())
+    {
+        if(resource_root())
+        {
+            if(is_directory())
+            {
+                if(is_slash_in_end())
+                {
+                    if(index_files())
+                    {
+                        if(post_location_has_cgi())
+                        {
+                            //cgi function.
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if(post_location_has_cgi())
+                {
+                    //cgi function.
+                }
+            }
+        }
+    }
+}
+
 void    response::GET_method()
 {
     if(resource_root())
@@ -632,7 +753,7 @@ void    response::GET_method()
         {
             if(is_slash_in_end())
             {
-                if(index_files())
+                if(get_index_files())
                 {
                     if(location_has_cgi())
                     {
@@ -672,6 +793,8 @@ void    handle_response(ServerData& server, Request& my_request)
             {
                 if(res.req.headers["method"] == "GET")
                     res.GET_method();
+                if(res.req.headers["method"] == "POST")
+                    res.POST_method();
             }
         }
     }
