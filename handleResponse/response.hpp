@@ -9,9 +9,10 @@
 #include <map>
 #include <vector>
 #include <cstring>
+#include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
-#include <unistd.h>
 #include "../parseConfigFile/parseConfigFile.hpp"
 #include "../parseRequest/Request.hpp"
 
@@ -31,7 +32,11 @@ class response{
         std::string get_body_res_page(int code);
         std::string get_body_post(int code);
         std::string get_body(std::string path_file);
+        std::string get_previous(std::string path);
+        std::string get_content_length(std::string file);
         std::string get_content_type(std::string path_file);
+        std::string get_error_page(int code);
+
     public:
         response(const LocationData &location, Request& my_request)
 			: req(my_request), location(location)
@@ -44,6 +49,7 @@ class response{
             message_status.insert(std::make_pair(301,"Moved Permanently"));
             message_status.insert(std::make_pair(405,"Method Not Allowed"));
             message_status.insert(std::make_pair(403,"Forbidden"));
+            message_status.insert(std::make_pair(501,"Not Implemented"));
             message_status.insert(std::make_pair(200,"OK"));
             message_status.insert(std::make_pair(201,"Created"));
 
@@ -59,7 +65,7 @@ class response{
         std::string                 root;
 
         bool        request_valid(Request& req, long max_body_size);
-        bool        check_location_config_file(std::pair<unsigned short,std::string> redirection);
+        bool        check_location_config_file();
         bool        method_allowed(std::string method);
         bool        resource_root();
         void        GET_method();
