@@ -29,6 +29,7 @@ public:
 	int									fdBody;
 	size_t								contentLen;
 	size_t								ActualContentLen;
+	time_t								lastTimeUsed;
 private:
 	std::ofstream	fileStream;
 	Flag			flag;

@@ -1,12 +1,12 @@
 
-#include "./utils.hpp"
-#include "./server.hpp"
 #include "./parseConfigFile/parseConfigFile.hpp"
 #include "./parseRequest/Request.hpp"
 #include "./handleResponse/response.hpp"
-
+#include "./socket/socket.hpp"
 #include <cstdio>
+#include <cstdlib>
 #include <string>
+#include <sys/_types/_fd_def.h>
 #include <sys/select.h>
 #include <algorithm>
 #include <sys/socket.h>
@@ -15,100 +15,86 @@
 #include <unistd.h> 
 #include <sys/types.h>
 
-#define BUFF_SIZE 1024
+#define TIME_LIMIT_SEC 10
+
+bool isTimePassed(time_t last_time_used)
+{
+    if (time(NULL) - last_time_used >= TIME_LIMIT_SEC)
+        return true;
+    return false;
+}
 
 int main(int argc, char** argv)
 {
 	std::vector<ServerData>	cData;
-	std::map<int, Request>	request;
+	std::vector<int> 		serversSockets;
+	fd_set 					currentSocketsSet,writeSet,readSet;
+	RequestMap				request;
+	char 					buff[BUFF_SIZE + 1];
+	int 					read_n = 0;
 
+	FD_ZERO(&currentSocketsSet);
 	if (parseConfigFile(argc, argv, cData) == -1)
 		return (EXIT_FAILURE);
-
-	// getting servers from config file
-	std::vector<server> s;
 	for (size_t i = 0; i < cData.size(); i++)
-		s.push_back(server(cData[i]));
-
-	// servers sockets to add to set
-	std::vector<int> servers_socks;
-	for (size_t i = 0; i < s.size(); i++)
-		servers_socks.push_back(s[i].sock_fd);
-
-	// buffer for request read/writing and reponse file reading
-	char buff[BUFF_SIZE + 1];
-	int read_n = 0;
-	fd_set current_sockets,write_set, read_set;
-	FD_ZERO(&current_sockets);
-	for (size_t i = 0; i < servers_socks.size(); i++)
+		serversSockets.push_back(createServerSocket(cData[i]));
+	for (size_t i = 0; i < serversSockets.size(); i++)
 	{
-		FD_SET(servers_socks[i], &current_sockets);
-		printf("socket = %d\n", servers_socks[i]);
+		FD_SET(serversSockets[i], &currentSocketsSet);
+		printf("socket = %d\n", serversSockets[i]);
 	}
-	printf("size = %lu\n", servers_socks.size());
-
-
-	int max_fd = *std::max_element(servers_socks.begin(), servers_socks.end());
+	printf("size = %lu\n", serversSockets.size());
+	int max_fd = *std::max_element(serversSockets.begin(), serversSockets.end());
+	RequestMap::iterator tmp;
 	while (1) 
 	{
-		write_set = read_set = current_sockets;
-		select(FD_SETSIZE, &read_set, &write_set, NULL, NULL);
+		for (RequestMap::iterator it = request.begin(), tmp = it;  it != request.end(); it = tmp)
+		{
+			tmp++;
+			if (it->second.fd != -1 && isTimePassed(it->second.lastTimeUsed))
+			{
+				closeConnection(it->first, request, &currentSocketsSet);	
+			}
+		}
+		writeSet = readSet = currentSocketsSet;
+		select(FD_SETSIZE, &readSet, &writeSet, NULL, NULL);
 		for (int i = 0; i <= max_fd; i++)
 		{
-			if (FD_ISSET(i, &read_set) && request[i].state == STARTED)
+			if (FD_ISSET(i, &readSet) && request[i].state == STARTED)
 			{
-				if (std::find(servers_socks.begin(), servers_socks.end(), i) != servers_socks.end())
-				{
-					std::cout << "CONNECTION" << std::endl;
-					const int	conn_fd = accept(i, NULL, NULL);
-					if (fcntl(conn_fd, F_SETFL, O_NONBLOCK) < 0)
-					{
-						std::cout << "FCNTL FAILURE" << std::endl;
-						exit(1);
-					}
-					max_fd = (conn_fd > max_fd) ? conn_fd : max_fd;
-					request[conn_fd] = Request(conn_fd);
-					FD_SET(conn_fd, &current_sockets);
-				}
+				if (std::find(serversSockets.begin(), serversSockets.end(), i) != serversSockets.end())
+					acceptConnection(request, max_fd, &currentSocketsSet, i);
 				else
 				{
+					request[i].lastTimeUsed = time(NULL); // if request  still going
 					bzero(buff, BUFF_SIZE);
-					if ((read_n = read(i, buff, BUFF_SIZE)) <= 0)
+					if ((read_n = read(i, buff, BUFF_SIZE)) == 0)
 					{
-						printf("READ <= 0\n");
-						close(i);
-						request.erase(i);
-						FD_CLR(i, &current_sockets);
-						continue ;
+						std::cout << "read == 0 " << std::endl;
+						closeConnection(i, request, &currentSocketsSet);
+						continue;
 					}
-					usleep(100);
 					request[i](buff);
 				}
 			}
-			if (FD_ISSET(i, &write_set) && request[i].state == FINISHED)
+			if (FD_ISSET(i, &writeSet) && request[i].state == FINISHED)
 			{
-				typedef std::map<std::string, std::string>::iterator	Iter;
-				Iter	it = request[i].headers.begin();
-				Iter	ite = request[i].headers.end();
-				std::cout << "Headers:" << std::endl;
-				for (; it != ite; ++it) {
-					std::cout << "|" << it->first << "|" << it->second << "|" << std::endl;
+				// Need to match server ...
+				request[i].lastTimeUsed = time(NULL); // if response  still going
+				if (request[i].resFlag == HEADERNOTSENT)
+					handle_response(cData[0], request[i]);
+				if (request[i].resState == BODYNOTSENT)
+					sendingResponse(request[i]);
+				if (request[i].resState == BODYSENT)
+				{
+					close(request[i].fdBody); // fdBody initialized
+					if (request[i].headers.count("Connection") == 0 || request[i].headers["Connection"] != "keep-alive")
+						closeConnection(i, request, &currentSocketsSet);
+					else
+						request[i].clear();
 				}
-				std::cout << "filename:" << std::endl;
-				std::cout << request[i].fileName;
-				request[i].clear();
-				close(request[i].fdBody);
 			}
 		}
 	}
-
 	return 0;
 }
-
-
-
-
-
-
-
-

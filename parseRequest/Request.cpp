@@ -1,10 +1,11 @@
 
 #include "Request.hpp"
+#include <ctime>
 
 Request::Request(void)
 	: headers(), state(STARTED), fileName("./configFileExamples/temp/file"),
 	fd(-1), resFlag(HEADERNOTSENT), resState(BODYNOTSENT), fdBody(-1),
-	contentLen(0), ActualContentLen(0), fileStream(), flag(HEADERS),
+	contentLen(0), ActualContentLen(0),lastTimeUsed(time(NULL)), fileStream(), flag(HEADERS),
 	chunkState(CHUNKSIZE), chunkSize(0), pos(0), buffer(), temp()
 {
 }
@@ -12,7 +13,7 @@ Request::Request(void)
 Request::Request(const int& fd)
 	: headers(), state(STARTED), fileName("./configFileExamples/temp/file"),
 	fd(fd), resFlag(HEADERNOTSENT), resState(BODYNOTSENT), fdBody(-1),
-	contentLen(0), ActualContentLen(0), fileStream(), flag(HEADERS),
+	contentLen(0), ActualContentLen(0),lastTimeUsed(time(NULL)), fileStream(), flag(HEADERS),
 	chunkState(CHUNKSIZE), chunkSize(0), pos(0), buffer(), temp()
 {
 }
@@ -28,6 +29,7 @@ Request::Request(const Request& src)
 	this->fdBody = src.fdBody;
 	this->contentLen = src.contentLen;
 	this->ActualContentLen = src.ActualContentLen;
+	this->lastTimeUsed = src.lastTimeUsed;
 	this->flag = src.flag;
 	this->chunkState = src.chunkState;
 	this->chunkSize = src.chunkSize;
@@ -50,6 +52,7 @@ Request&	Request::operator=(const Request& rhs)
 	this->fdBody = rhs.fdBody;
 	this->contentLen = rhs.contentLen;
 	this->ActualContentLen = rhs.ActualContentLen;
+	this->lastTimeUsed = rhs.lastTimeUsed;
 	this->flag = rhs.flag;
 	this->chunkState = rhs.chunkState;
 	this->chunkSize = rhs.chunkSize;
