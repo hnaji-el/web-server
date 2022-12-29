@@ -4,16 +4,16 @@
 Request::Request(void)
 	: headers(), state(STARTED), fileName("./configFileExamples/temp/file"),
 	fd(-1), resFlag(HEADERNOTSENT), resState(BODYNOTSENT), fdBody(-1),
-	fileStream(), flag(HEADERS), contentLen(0), ActualContentLen(0),
-	pos(0), buffer()
+	contentLen(0), ActualContentLen(0), fileStream(), flag(HEADERS),
+	chunkState(CHUNKSIZE), chunkSize(0), pos(0), buffer(), temp()
 {
 }
 
 Request::Request(const int& fd)
 	: headers(), state(STARTED), fileName("./configFileExamples/temp/file"),
 	fd(fd), resFlag(HEADERNOTSENT), resState(BODYNOTSENT), fdBody(-1),
-	fileStream(), flag(HEADERS), contentLen(0), ActualContentLen(0),
-	pos(0), buffer()
+	contentLen(0), ActualContentLen(0), fileStream(), flag(HEADERS),
+	chunkState(CHUNKSIZE), chunkSize(0), pos(0), buffer(), temp()
 {
 }
 
@@ -26,11 +26,14 @@ Request::Request(const Request& src)
 	this->resFlag = src.resFlag;
 	this->resState = src.resState;
 	this->fdBody = src.fdBody;
-	this->flag = src.flag;
 	this->contentLen = src.contentLen;
 	this->ActualContentLen = src.ActualContentLen;
+	this->flag = src.flag;
+	this->chunkState = src.chunkState;
+	this->chunkSize = src.chunkSize;
 	this->pos = src.pos;
 	this->buffer = src.buffer;
+	this->temp = src.temp;
 }
 
 Request&	Request::operator=(const Request& rhs)
@@ -45,11 +48,14 @@ Request&	Request::operator=(const Request& rhs)
 	this->resFlag = rhs.resFlag;
 	this->resState = rhs.resState;
 	this->fdBody = rhs.fdBody;
-	this->flag = rhs.flag;
 	this->contentLen = rhs.contentLen;
 	this->ActualContentLen = rhs.ActualContentLen;
+	this->flag = rhs.flag;
+	this->chunkState = rhs.chunkState;
+	this->chunkSize = rhs.chunkSize;
 	this->pos = rhs.pos;
 	this->buffer = rhs.buffer;
+	this->temp = rhs.temp;
 
 	return (*this);
 }
@@ -130,41 +136,97 @@ void	Request::parseRequestHeader(const size_t fPos, const size_t lPos)
 	this->headers[fieldName] = fieldValue;
 }
 
-
-void	Request::parseRequestBodyWithoutEncoding(std::string chunk)
-{
-	this->fileStream << chunk;
-	this->ActualContentLen += chunk.size();
-	if (this->ActualContentLen >= this->contentLen)
-		this->setState(FINISHED);
-}
-
-void	Request::parseRequestBodyWithEncoding(std::string)
-{
-}
-
 const char*	Request::checkAndSetFlags(void)
 {
 	if (this->headers["method"] != "POST" || !this->headers.count("Content-Length"))
 		return (this->setState(FINISHED));
-
 	if (this->headers.count("Transfer-Encoding") &&
 		this->headers["Transfer-Encoding"] != "chunked")
 		return (this->setState(FINISHED));
-
-	this->contentLen = this->stringToNumber(this->headers["Content-Length"]);
-	if (this->contentLen == 0)
-		return (this->setState(FINISHED));
-
-	this->setFileName();
-	this->fileStream.open(this->fileName);
 
 	this->flag = BODYCHUNKED;
 	if (!this->headers.count("Transfer-Encoding"))
 		this->flag = BODY;
 
-	this->buffer.erase(0, this->pos + 4);
-	return (this->buffer.c_str());
+	this->setFileName();
+	this->fileStream.open(this->fileName);
+	this->contentLen = this->stringToNumber(this->headers["Content-Length"]);
+	this->temp = this->buffer.substr(this->pos + 4, std::string::npos);
+	this->buffer.clear();
+
+	return (this->temp.c_str());
+}
+
+void	Request::parseRequestBodyWithoutEncoding(const std::string& chunk)
+{
+	this->fileStream << chunk;
+	this->ActualContentLen += chunk.size();
+	if (this->ActualContentLen >= this->contentLen)
+	{
+		fileStream.close();
+		this->state = FINISHED;
+	}
+}
+
+void	Request::parseRequestBodyWithEncoding(const char* chunk)
+{
+	this->buffer += chunk;
+
+	while (this->chunkState != LASTCHUNK)
+	{
+		if (this->chunkState == CHUNKSIZE)
+		{
+			if (!this->isChunkSizeComplete())
+				return ;
+			this->calculateChunkSize(); // CHUNKDATA || LASTCHUNK
+		}
+		if (this->chunkState == CHUNKDATA)
+		{
+			if (this->buffer.size() < this->chunkSize + 2)
+				return ;
+			this->parseChunkData(); // CHUNKSIZE || LASTCHUNK
+		}
+	}
+	fileStream.close();
+	this->state = FINISHED;
+}
+
+bool	Request::isChunkSizeComplete(void)
+{
+	this->pos = this->buffer.find("\r\n");
+
+	if (this->pos != std::string::npos)
+		return (true);
+	return (false);
+}
+
+void	Request::calculateChunkSize(void)
+{
+	std::stringstream	strStream;
+
+	strStream << this->buffer.substr(0, this->pos);
+	strStream >> std::hex >> this->chunkSize;
+
+	this->buffer.erase(0, this->pos + 2);
+	if (this->chunkSize == 0)
+		this->chunkState = LASTCHUNK;
+	else
+		this->chunkState = CHUNKDATA;
+}
+
+void	Request::parseChunkData(void)
+{
+	fileStream << this->buffer.substr(0, this->chunkSize);
+	this->ActualContentLen += this->chunkSize;
+
+	if (this->buffer.compare(this->chunkSize, 2, "\r\n") != 0)
+	{
+		this->ActualContentLen = this->contentLen + 1;
+		this->chunkState = LASTCHUNK;
+		return ;
+	}
+	this->buffer.erase(0, this->chunkSize + 2);
+	this->chunkState = CHUNKSIZE;
 }
 
 const char*	Request::setState(State state)

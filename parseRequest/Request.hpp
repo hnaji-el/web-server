@@ -7,31 +7,13 @@
 # include <string>
 # include <limits>
 # include <fstream>
+# include <sstream>
 
-enum State
-{
-	STARTED,
-	FINISHED
-};
-
-enum Flag
-{
-	HEADERS,
-	BODY,
-	BODYCHUNKED
-};
-
-enum ResFlag
-{
-	HEADERSENT,
-	HEADERNOTSENT
-};
-
-enum ResState
-{
-	BODYSENT,
-	BODYNOTSENT
-};
+enum State      { STARTED      , FINISHED               };
+enum Flag       { HEADERS      , BODYCHUNKED, BODY      };
+enum ResFlag    { HEADERNOTSENT, HEADERSENT             };
+enum ResState   { BODYNOTSENT  , BODYSENT               };
+enum ChunkState { CHUNKSIZE    , CHUNKDATA  , LASTCHUNK };
 
 class Request
 {
@@ -45,13 +27,16 @@ public:
 	ResFlag								resFlag;
 	ResState							resState;
 	int									fdBody;
+	size_t								contentLen;
+	size_t								ActualContentLen;
 private:
 	std::ofstream	fileStream;
 	Flag			flag;
-	size_t			contentLen;
-	size_t			ActualContentLen;
-	size_t			pos;            // position of CRLFCRLF
+	ChunkState		chunkState;
+	size_t			chunkSize;
+	size_t			pos;
 	std::string		buffer;         // To collect request headers
+	std::string		temp;
 
 /*MEMBER FUNCTIONS*/
 public:
@@ -75,8 +60,11 @@ private:
 	void	parseRequestHeader(const size_t fPos, const size_t lPos);
 
 	// parse request BODY
-	void	parseRequestBodyWithoutEncoding(std::string chunk);
-	void	parseRequestBodyWithEncoding(std::string chunk);
+	void	parseRequestBodyWithoutEncoding(const std::string& chunk);
+	void	parseRequestBodyWithEncoding(const char* chunk);
+	bool	isChunkSizeComplete(void);
+	void	calculateChunkSize(void);
+	void	parseChunkData(void);
 
 	const char*	checkAndSetFlags(void);
 	const char*	setState(State state);
