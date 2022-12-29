@@ -77,7 +77,7 @@ void	Request::operator()(const char* chunk)
 {
 	if (flag == HEADERS)
 	{
-		if (!this->collectRequestHeaders(chunk))
+		if (!this->isRequestHeadersComplete(chunk))
 			return ;
 		this->parseRequestHeaders();
 		chunk = this->checkAndSetFlags();
@@ -88,7 +88,7 @@ void	Request::operator()(const char* chunk)
 		this->parseRequestBodyWithEncoding(chunk);
 }
 
-bool	Request::collectRequestHeaders(const char* chunk)
+bool	Request::isRequestHeadersComplete(const char* chunk)
 {
 	this->buffer += chunk;
 	this->pos = this->buffer.find("\r\n\r\n");

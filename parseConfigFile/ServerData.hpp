@@ -26,6 +26,7 @@ public:
 	MapOfStatusCode	statusCode;
 	Pair			redirect;
 	std::string		uploadPath;
+	std::string		cgi;
 
 	// Helper data member
 	bool	flag;
@@ -50,7 +51,6 @@ public:
 	VectorOfStrings	index;
 	MapOfStatusCode	statusCode;
 	Pair			redirect;
-	std::string		uploadPath;
 	// LOCATION's DATA
 	std::vector<LocationData>	location;
 
