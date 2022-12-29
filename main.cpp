@@ -87,25 +87,28 @@ int main(int argc, char** argv)
 			}
 			if (FD_ISSET(i, &write_set) && request[i].state == FINISHED)
 			{
-				// Need to match server ...
-				if (request[i].resFlag == HEADERNOTSENT)
-					handle_response(cData[0], request[i]);
-				if (request[i].resState == BODYNOTSENT)
-				{
-					char buff[10001];
-					bzero(&buff, 10001);
-					int r = read(request[i].fdBody, buff, 10000);
-					write(i, buff, r);
-					// reading from the bodyPath and write ...
+				typedef std::map<std::string, std::string>::iterator	Iter;
+				Iter	it = request[i].headers.begin();
+				Iter	ite = request[i].headers.end();
+				std::cout << "Headers:" << std::endl;
+				for (; it != ite; ++it) {
+					std::cout << "|" << it->first << "|" << it->second << "|" << std::endl;
 				}
-				if (request[i].resState == BODYSENT)
-				{
-					request[i].clear();
-					close(request[i].fdBody);
-				}
+				std::cout << "filename:" << std::endl;
+				std::cout << request[i].fileName;
+				request[i].clear();
+				close(request[i].fdBody);
 			}
 		}
 	}
 
 	return 0;
 }
+
+
+
+
+
+
+
+

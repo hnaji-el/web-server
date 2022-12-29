@@ -54,7 +54,7 @@ public:
 	void	clear(void);
 private:
 	// parse request HEADERS
-	bool	collectRequestHeaders(const char* chunk);
+	bool	isRequestHeadersComplete(const char* chunk);
 	void	parseRequestHeaders(void);
 	void	parseRequestLine(const size_t lPos);
 	void	parseRequestHeader(const size_t fPos, const size_t lPos);

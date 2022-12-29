@@ -34,7 +34,6 @@ void	Parser::fillServerTable(void)
 	this->_serverTable["index"] = &Parser::parserParseIndex;
 	this->_serverTable["autoindex"] = &Parser::parserParseAutoindex;
 	this->_serverTable["return"] = &Parser::parserParseReturn;
-	this->_serverTable["upload_path"] = &Parser::parserParseUploadPath;
 	this->_serverTable["location"] = &Parser::parserParseLocation;
 }
 
@@ -48,6 +47,7 @@ void	Parser::fillLocationTable(void)
 	this->_locationTable["autoindex"] = &Parser::parserParseAutoindexLoc;
 	this->_locationTable["return"] = &Parser::parserParseReturnLoc;
 	this->_locationTable["upload_path"] = &Parser::parserParseUploadPathLoc;
+	this->_locationTable["cgi"] = &Parser::parserParseCgiLoc;
 }
 
 /*
@@ -277,15 +277,6 @@ void	Parser::parserParseReturn(ServerData& serData)
 	this->expectedToken(TOKEN_EOL);
 }
 
-void	Parser::parserParseUploadPath(ServerData& serData)
-{
-	this->isDirectiveDuplicate(this->_numOfCallS, "upload_path");
-
-	this->expectedToken(TOKEN_WORD);
-	serData.uploadPath = this->_prevToken.value;
-	this->expectedToken(TOKEN_EOL);
-}
-
 /*
  * Parse directives of Location block
  */
@@ -398,6 +389,15 @@ void	Parser::parserParseUploadPathLoc(LocationData& locData)
 
 	this->expectedToken(TOKEN_WORD);
 	locData.uploadPath = this->_prevToken.value;
+	this->expectedToken(TOKEN_EOL);
+}
+
+void	Parser::parserParseCgiLoc(LocationData& locData)
+{
+	this->isDirectiveDuplicate(this->_numOfCallL, "cgi");
+
+	this->expectedToken(TOKEN_WORD);
+	locData.cgi = this->_prevToken.value;
 	this->expectedToken(TOKEN_EOL);
 }
 

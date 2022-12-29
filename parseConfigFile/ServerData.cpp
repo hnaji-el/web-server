@@ -17,8 +17,7 @@ ServerData::~ServerData(void)
 LocationData::LocationData(const ServerData& ser)
 	: acceptedMeths(ser.acceptedMeths), autoindex(ser.autoindex),
 	limitSize(ser.limitSize), root(ser.root), index(ser.index),
-	statusCode(ser.statusCode), redirect(ser.redirect),
-	uploadPath(ser.uploadPath), flag(false)
+	statusCode(ser.statusCode), redirect(ser.redirect), flag(false)
 {
 }
 
