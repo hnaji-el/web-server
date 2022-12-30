@@ -26,8 +26,12 @@ class response{
         bool        post_location_has_cgi();
         bool        is_auto_index();
         bool        support_upload();
+        bool        is_slash_in_end_delete();
 
+        void        delete_folder();
+        void        delete_file();
         void        fill_content_types();
+    
         std::string get_auto_index_directory();
         std::string get_body_res_page(int code);
         std::string get_body(std::string path_file);
@@ -73,6 +77,7 @@ class response{
         bool        resource_root();
         void        GET_method();
         void        POST_method();
+        void        DELETE_method();
 
         void        set_response_error(int code);
         void        set_response_permanently(int code,std::string redirection);

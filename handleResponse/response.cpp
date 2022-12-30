@@ -291,6 +291,11 @@ void    response::set_response_auto_index(int code,std::string body)
 
 bool    response::request_valid(Request& req,long max_body_size)
 {
+    if(!req.headers.count("Host"))
+    {
+        set_response_error(400);
+        return false;
+    }
     if(req.headers["method"] != "GET" && req.headers["method"] != "POST" && req.headers["method"] != "DELETE")
     {
         set_response_error(501);
@@ -715,6 +720,71 @@ bool    response::support_upload()
     return false;
 }
 
+bool    response::is_slash_in_end_delete()
+{
+    if(this->req.headers["uri"][this->req.headers["uri"].length() - 1] != '/')
+    {
+        set_response_page(409);
+        return false;
+    }
+    return true;
+}
+
+void    response::delete_folder()
+{
+    std::string cmd = "rm -rf " + this->root;
+    if(access(this->root.c_str(),R_OK) == 0)
+    {
+        system(cmd.c_str());
+        if(access(this->root.c_str(),F_OK) == 0)
+            set_response_page(500);
+        else
+            set_response_page(204);
+    }
+    else
+        set_response_page(403);
+    return ;
+}
+
+void    response::delete_file()
+{
+    std::string cmd = "rm -rf " + this->root;
+    system(cmd.c_str());
+    set_response_page(204);
+    return ;
+}
+
+void    response::DELETE_method()
+{
+    if(resource_root())
+    {
+        if(is_directory())
+        {
+            if(is_slash_in_end_delete())
+            {
+                if(location_has_cgi())
+                {
+                    if(index_files())
+                    {
+                        //cgi function.
+                    }
+                }
+                else
+                    delete_folder();
+            }
+        }
+        else
+        {
+            if(location_has_cgi())
+            {
+                //cgi function.
+            }
+            else
+                delete_file();
+        }
+    }
+}
+
 void    response::POST_method()
 {
     if(!support_upload())
@@ -795,6 +865,8 @@ void    handle_response(ServerData& server, Request& my_request)
                     res.GET_method();
                 if(res.req.headers["method"] == "POST")
                     res.POST_method();
+                if(res.req.headers["method"] == "DELETE")
+                    res.DELETE_method();
             }
         }
     }
