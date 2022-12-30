@@ -17,6 +17,40 @@
 
 #define TIME_LIMIT_SEC 10
 
+size_t  stringToNumber(const std::string& str)
+{
+	size_t  num = 0;
+
+	for (size_t i = 0; i < str.size(); i++)
+	{
+		num *= 10;
+		num = num + (str[i] - '0');
+	}
+	return (num);
+}
+
+ServerData&	matchServerBlock(std::vector<ServerData>& ser, Request& req)
+{
+	size_t			pos = 0;
+	unsigned short	port = 0;
+	size_t			index = 0;
+
+	if (!req.headers.count("Host")) // Bad request 400
+		return (ser[0]);
+	pos = req.headers["Host"].find(":");
+	if (pos == std::string::npos)
+		port = 80;
+	else
+		port = stringToNumber(req.headers["Host"].substr(pos + 1, std::string::npos));
+
+	for (; index < ser.size(); index++)
+	{
+		if (port == ser[index].port)
+			break ;
+	}
+	return (ser[index]);
+}
+
 bool isTimePassed(time_t last_time_used)
 {
     if (time(NULL) - last_time_used >= TIME_LIMIT_SEC)
@@ -79,10 +113,9 @@ int main(int argc, char** argv)
 			}
 			if (FD_ISSET(i, &writeSet) && request[i].state == FINISHED)
 			{
-				// Need to match server ...
 				request[i].lastTimeUsed = time(NULL); // if response  still going
 				if (request[i].resFlag == HEADERNOTSENT)
-					handle_response(cData[0], request[i]);
+					handle_response(matchServerBlock(cData, request[i]), request[i]);
 				if (request[i].resState == BODYNOTSENT)
 					sendingResponse(request[i]);
 				if (request[i].resState == BODYSENT)
