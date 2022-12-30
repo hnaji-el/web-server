@@ -113,19 +113,31 @@ int main(int argc, char** argv)
 			}
 			if (FD_ISSET(i, &writeSet) && request[i].state == FINISHED)
 			{
-				request[i].lastTimeUsed = time(NULL); // if response  still going
-				if (request[i].resFlag == HEADERNOTSENT)
-					handle_response(matchServerBlock(cData, request[i]), request[i]);
-				if (request[i].resState == BODYNOTSENT)
-					sendingResponse(request[i]);
-				if (request[i].resState == BODYSENT)
-				{
-					close(request[i].fdBody); // fdBody initialized
-					if (request[i].headers.count("Connection") == 0 || request[i].headers["Connection"] != "keep-alive")
-						closeConnection(i, request, &currentSocketsSet);
-					else
-						request[i].clear();
+				typedef std::map<std::string, std::string>::iterator	Iter;
+				Iter	it = request[i].headers.begin();
+				Iter	ite = request[i].headers.end();
+				std::cout << "Headers:" << std::endl;
+				for (; it != ite; ++it) {
+					std::cout << "|" << it->first << "|" << it->second << "|" << std::endl;
 				}
+				std::cout << "filename:" << std::endl;
+				std::cout << request[i].fileName;
+				request[i].clear();
+				close(request[i].fdBody);
+
+				//request[i].lastTimeUsed = time(NULL); // if response  still going
+				//if (request[i].resFlag == HEADERNOTSENT)
+				//	handle_response(matchServerBlock(cData, request[i]), request[i]);
+				//if (request[i].resState == BODYNOTSENT)
+				//	sendingResponse(request[i]);
+				//if (request[i].resState == BODYSENT)
+				//{
+				//	close(request[i].fdBody); // fdBody initialized
+				//	if (request[i].headers.count("Connection") == 0 || request[i].headers["Connection"] != "keep-alive")
+				//		closeConnection(i, request, &currentSocketsSet);
+				//	else
+				//		request[i].clear();
+				//}
 			}
 		}
 	}

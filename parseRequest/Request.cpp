@@ -124,10 +124,18 @@ void	Request::parseRequestLine(const size_t lPos)
 {
 	const size_t	fSP = this->buffer.find(" ", 0);
 	const size_t	sSP = this->buffer.find(" ", fSP + 1);
+	size_t			questMark = 0;
 
 	this->headers["method"] = this->buffer.substr(0, fSP);
-	this->headers["uri"] = this->buffer.substr(fSP + 1, sSP - fSP - 1);
 	this->headers["http-version"] = this->buffer.substr(sSP + 1, lPos - sSP - 1);
+	this->headers["uri"] = this->buffer.substr(fSP + 1, sSP - fSP - 1);
+
+	questMark = this->headers["uri"].find("?");
+	if (questMark != std::string::npos)
+	{
+		this->headers["query"] = this->headers["uri"].substr(questMark + 1);
+		this->headers["uri"].erase(questMark);
+	}
 }
 
 void	Request::parseRequestHeader(const size_t fPos, const size_t lPos)
