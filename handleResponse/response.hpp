@@ -51,6 +51,7 @@ class response{
             message_status.insert(std::make_pair(403,"Forbidden"));
             message_status.insert(std::make_pair(409,"Conflict"));
             message_status.insert(std::make_pair(500,"Internal Server Error"));
+            message_status.insert(std::make_pair(501,"Not Implemented"));
             message_status.insert(std::make_pair(200,"OK"));
             message_status.insert(std::make_pair(201,"Created"));
             message_status.insert(std::make_pair(204,"No Content"));

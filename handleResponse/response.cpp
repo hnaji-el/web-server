@@ -785,7 +785,7 @@ void    response::GET_method()
 void    handle_response(ServerData& server, Request& my_request)
 {
     response res(get_location(server, my_request),my_request);
-    if(res.request_valid(res.req, server.limitSize))
+    if(res.request_valid(res.req, res.location.limitSize))
     {
         if(res.check_location_config_file())
         {
