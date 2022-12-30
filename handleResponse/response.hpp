@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
+#include <sstream>
 #include "../parseConfigFile/parseConfigFile.hpp"
 #include "../parseRequest/Request.hpp"
 
@@ -89,5 +90,6 @@ class response{
 
 LocationData    get_location(ServerData server, Request &my_request);
 void            handle_response(ServerData& server, Request& my_request);
+std::string     to_string(int num);
 
 #endif

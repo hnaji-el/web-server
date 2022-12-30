@@ -1,6 +1,5 @@
 
 #include "response.hpp"
-#include <unistd.h>
 
 /* ---- TODO ---- 
     - check contentLen or Content-Length of request.
@@ -8,6 +7,18 @@
     - location has a cgi.
     - check error pages 
 */
+
+std::string to_string(int num)
+{
+    std::stringstream stream;
+
+    stream << num;
+
+    std::string str;
+
+    stream >> str;
+    return str;
+}
 
 std::string response::get_error_page(int code)
 {
@@ -49,13 +60,13 @@ std::string response::get_body_res_page(int code)
 "    <meta charset=\"UTF-8\">\n"\
 "    <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n"\
 "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"\
-"    <title>" + std::to_string(code) + " " + this->message_status[code] + "</title>\n"\
+"    <title>" + to_string(code) + " " + this->message_status[code] + "</title>\n"\
 "    <style>\n"\
 "        h1{text-align: center;}\n"\
 "    </style>\n"\
 "</head>\n"\
 "<body>\n"\
-"    <h1>" + std::to_string(code) + " " + this->message_status[code] +"</h1>\n"\
+"    <h1>" + to_string(code) + " " + this->message_status[code] +"</h1>\n"\
 "    <hr>\n"\
 "</body>\n"\
 "</html>";
@@ -70,13 +81,13 @@ std::string response::get_body_post(int code)
 "    <meta charset=\"UTF-8\">\n"\
 "    <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n"\
 "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"\
-"    <title>" + std::to_string(code) + " " + this->message_status[code] + "</title>\n"\
+"    <title>" + to_string(code) + " " + this->message_status[code] + "</title>\n"\
 "    <style>\n"\
 "        h1{text-align: center;}\n"\
 "    </style>\n"\
 "</head>\n"\
 "<body>\n"\
-"    <h1>" + std::to_string(code) + " " + this->message_status[code] +"</h1>\n"\
+"    <h1>" + to_string(code) + " " + this->message_status[code] +"</h1>\n"\
 "    <hr>\n"\
 "</body>\n"\
 "</html>";
@@ -99,8 +110,8 @@ void    response::set_response_page(int code)
     data_response data;
 
     data.body = get_body_post(code);
-    data.request_line = "HTTP/1.1 " + std::to_string(code) + " " + this->message_status[code];
-    data.headers.content_length = std::to_string(data.body.length());
+    data.request_line = "HTTP/1.1 " + to_string(code) + " " + this->message_status[code];
+    data.headers.content_length = to_string(data.body.length());
     data.headers.content_type = "text/html";
     headers+= data.request_line + "\r\n" +
             "Content-Length: " + data.headers.content_length + "\r\n" + "Content-Type: " + data.headers.content_type + 
@@ -133,7 +144,7 @@ void    response::set_response_error(int code)
     if(!error_page.length())
         data.body = get_body_res_page(code);
     
-    data.request_line = "HTTP/1.1 " + std::to_string(code) + " " + this->message_status[code];
+    data.request_line = "HTTP/1.1 " + to_string(code) + " " + this->message_status[code];
     if(error_page.length())
     {
         data.headers.content_length = get_content_length(error_page);
@@ -141,7 +152,7 @@ void    response::set_response_error(int code)
     }
     else
     {
-        data.headers.content_length = std::to_string(data.body.length());
+        data.headers.content_length = to_string(data.body.length());
         data.headers.content_type = "text/html";
     }
 
@@ -175,7 +186,7 @@ void    response::set_response_permanently(int code,std::string redirection = ""
     std::string headers;
     data_response data;
 
-    data.request_line = "HTTP/1.1 " + std::to_string(code) + " " + this->message_status[code];
+    data.request_line = "HTTP/1.1 " + to_string(code) + " " + this->message_status[code];
     data.headers.location = "Location: http://" + this->req.headers["Host"];
     if(redirection.length())
         data.headers.location ="Location: " + redirection;
@@ -227,7 +238,7 @@ std::string response::get_content_length(std::string file)
         fseek(fp, 0, SEEK_END);
         long int res = ftell(fp);
         fclose(fp);
-        return std::to_string(res);
+        return to_string(res);
     }
     return "";
 }
@@ -246,7 +257,7 @@ void       response::set_response_file(int code)
     std::string headers;
     data_response data;
 
-    data.request_line = "HTTP/1.1 " + std::to_string(code) + " " + this->message_status[code];
+    data.request_line = "HTTP/1.1 " + to_string(code) + " " + this->message_status[code];
     data.headers.content_length = get_content_length(this->root);
     data.headers.content_type = get_content_type(this->root);
     
@@ -274,8 +285,8 @@ void    response::set_response_auto_index(int code,std::string body)
     data_response data;
     
     data.body = body;
-    data.request_line = "HTTP/1.1 " + std::to_string(code) + " " + this->message_status[code];
-    data.headers.content_length = std::to_string(data.body.length());
+    data.request_line = "HTTP/1.1 " + to_string(code) + " " + this->message_status[code];
+    data.headers.content_length = to_string(data.body.length());
     data.headers.content_type = "text/html";
     
     headers+= data.request_line + "\r\n" +
@@ -465,6 +476,11 @@ bool    response::get_index_files()
 
 bool    response::location_has_cgi()
 {
+    std::string extention;
+    
+    extention = this->root.substr(this->root.find_last_of('.') + 1);
+    if(this->location.cgi.length() && extention == "php")
+        return true;
     return false;
 }
 
@@ -827,7 +843,7 @@ void    response::GET_method()
                 {
                     if(location_has_cgi())
                     {
-                        //cgi function.
+                        std::cout << "root: " << this->root << std::endl;
                     }
                     else
                         set_response_file(200);
@@ -843,7 +859,7 @@ void    response::GET_method()
         {
             if(location_has_cgi())
             {
-                //cgi function.
+                std::cout << "root: " << this->root << std::endl;
             }
             else
                 set_response_file(200);
