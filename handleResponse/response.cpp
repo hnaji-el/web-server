@@ -1,5 +1,6 @@
 
 #include "response.hpp"
+#include <string>
 
 std::string to_string(int num)
 {
@@ -311,6 +312,17 @@ void response::setMetaVariables()
     // setenv("SCRIPT_FILENAME", scriptName.c_str(), 1);
 }
 
+std::string	setCgiFileName(void)
+{
+	static unsigned int	count = 0;
+	unsigned int		nb = ++count;
+    std::string fileName = "/tmp/cgi";
+    unsigned sz = fileName.size();
+	for (; nb != 0; nb = nb / 10)
+	    fileName.insert(sz, 1, nb % 10 + '0');
+    return fileName;
+}
+
 std::string response::getCgiResponse()
 {
     setMetaVariables();
@@ -322,7 +334,7 @@ std::string response::getCgiResponse()
     int cgiFileFd = open(this->req.fileName.c_str(), O_RDONLY);
     pipe(pipeFd);
 
-    std::string cgiFileName = "cgi.txt"; // TODO: random naming
+    std::string cgiFileName = setCgiFileName();
     int pid = fork();
     if (pid == 0)
     {
@@ -361,7 +373,6 @@ int response::parseCgiOutput(std::string& fileName, response::Map& headers)
 		parseCgiOutputHeader(buffer, headers);
 		std::getline(fileStream, buffer);
 	}
-    std::cout << "AFTER GET CGI REPONSE" << std::endl;
     std::streampos	bodyPos = fileStream.tellg();
 	fileStream.seekg(0, std::ios_base::end);
     if (headers.count("Content-Length") == 0)

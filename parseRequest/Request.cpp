@@ -3,7 +3,7 @@
 #include <ctime>
 
 Request::Request(void)
-	: headers(), state(STARTED), fileName("./configFileExamples/temp/file"),
+	: headers(), state(STARTED), fileName("/tmp/body"),
 	fd(-1), resFlag(HEADERNOTSENT), resState(BODYNOTSENT), fdBody(-1),
 	contentLen(0), ActualContentLen(0),lastTimeUsed(time(NULL)), fileStream(), flag(HEADERS),
 	chunkState(CHUNKSIZE), chunkSize(0), pos(0), buffer(), temp()
@@ -11,7 +11,7 @@ Request::Request(void)
 }
 
 Request::Request(const int& fd)
-	: headers(), state(STARTED), fileName("./configFileExamples/temp/file"),
+	: headers(), state(STARTED), fileName("/tmp/body"),
 	fd(fd), resFlag(HEADERNOTSENT), resState(BODYNOTSENT), fdBody(-1),
 	contentLen(0), ActualContentLen(0),lastTimeUsed(time(NULL)), fileStream(), flag(HEADERS),
 	chunkState(CHUNKSIZE), chunkSize(0), pos(0), buffer(), temp()

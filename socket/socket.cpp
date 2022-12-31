@@ -6,6 +6,8 @@ void	acceptConnection(RequestMap &request, int &max_fd, fd_set *current_sockets,
 	const int	conn_fd = accept(i, NULL, NULL);
 	if (fcntl(conn_fd, F_SETFL, O_NONBLOCK) < 0)
 		exit(EXIT_FAILURE);
+    int option_value = 1;
+    setsockopt(conn_fd, SOL_SOCKET, SO_NOSIGPIPE, &option_value, sizeof(option_value));
 	max_fd = (conn_fd > max_fd) ? conn_fd : max_fd;
 	request[conn_fd] = Request(conn_fd);
 	FD_SET(conn_fd, current_sockets);
