@@ -30,7 +30,7 @@ std::string getCgiResponse(const std::string& uriFile,const std::string& bodyFil
     char buff[BUFF_SIZE + 1];
     int fdBody;
     int status;
-    char *args[2] = {(char*)"./php-cgi", NULL};
+    char *args[3] = {(char*)"./php-cgi",this->, NULL};
     int cgiFileFd = open(bodyFile.c_str(), O_RDONLY);
     bzero(&buff, BUFF_SIZE);
     pipe(pipeFd);

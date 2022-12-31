@@ -102,9 +102,9 @@ int main(int argc, char** argv)
 				{
 					request[i].lastTimeUsed = time(NULL); // if request  still going
 					bzero(buff, BUFF_SIZE + 1);
-					if ((read_n = read(i, buff, BUFF_SIZE)) == 0)
+					if ((read_n = read(i, buff, BUFF_SIZE)) == 0 || read_n == -1)
 					{
-						std::cout << "read == 0 " << std::endl;
+						std::cout << "read == 0 || -1 " << std::endl;
 						closeConnection(i, request, &currentSocketsSet);
 						continue;
 					}
@@ -119,7 +119,8 @@ int main(int argc, char** argv)
 					handle_response(matchServerBlock(cData, request[i]), request[i]);
 				}
 				if (request[i].resState == BODYNOTSENT)
-					sendingResponse(request[i]);
+					if (sendingResponse(request[i]) == 1)
+				        closeConnection(i, request, &currentSocketsSet);
 				if (request[i].resState == BODYSENT)
 				{
 					close(request[i].fdBody); // fdBody initialized

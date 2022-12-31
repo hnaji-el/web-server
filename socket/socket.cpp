@@ -1,5 +1,13 @@
 #include "socket.hpp"
 
+void isFdReady(int fd)
+{
+    fd_set set;
+    FD_ZERO(&set);
+    FD_SET(fd, &set);
+    select(fd + 1, &set, NULL, NULL, NULL);
+}
+
 void	acceptConnection(RequestMap &request, int &max_fd, fd_set *current_sockets, const int i)
 {
 	std::cout << "CONNECTION" << std::endl;
@@ -12,16 +20,22 @@ void	acceptConnection(RequestMap &request, int &max_fd, fd_set *current_sockets,
 	request[conn_fd] = Request(conn_fd);
 	FD_SET(conn_fd, current_sockets);
 }
-void    sendingResponse(Request & req)
+
+bool    sendingResponse(Request & req)
 {
 	char buff[BUFF_SIZE + 1];
-	bzero(&buff, BUFF_SIZE);
+	bzero(&buff, BUFF_SIZE + 1);
+    int write_return;
+
+    isFdReady(req.fdBody);
 	int r = read(req.fdBody, buff, BUFF_SIZE);
-	write(req.fd, buff, r);
+	if ((write_return = write(req.fd, buff, r) == 0) || write_return == -1)
+        return 1;
     if (r < BUFF_SIZE)
         req.resState =BODYSENT;
     else
         req.resState =BODYNOTSENT;  
+    return 0;
 }
 
 void	closeConnection(int fd, std::map<int, Request> & request ,fd_set *currentSocketsSet)

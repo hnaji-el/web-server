@@ -1,6 +1,7 @@
 
 #include "response.hpp"
 #include <string>
+#include "../socket/socket.hpp"
 
 std::string to_string(int num)
 {
@@ -297,19 +298,15 @@ void response::setMetaVariables()
     setenv("SERVER_PROTOCOL", "HTTP/1.1", 1);
     setenv("SERVER_SOFTWARE", "Webserv", 1);
     setenv("PATH_TRANSLATED", this->root.c_str(), 1);
+    setenv("SCRIPT_FILENAME", this->root.c_str(), 1);
     setenv("REDIRECT_STATUS", "200", 1);
-    // setenv("SCRIPT_FILENAME", "index.php" , 1);
     setenv("CONTENT_LENGTH", to_string(this->req.contentLen).c_str(), 1);
     setenv("CONTENT_TYPE", this->req.headers["Content-Type"].c_str(), 1);
-    // setenv("REQUEST_METHOD", this->req.headers["method"].c_str(), 1);
-     setenv("QUERY_STRING", this->req.headers["query"].c_str(), 1);
-    // setenv("PATH_INFO", this->req.headers["uri"].c_str() , 1);
+    setenv("QUERY_STRING", this->req.headers["query"].c_str(), 1);
 
-
-    // setenv("REDIRECT_STATUS", "200", 1);
-    // setenv("GATEWAY_INTERFACE", "CGI/1.1", 1);
-    // setenv("PATH_INFO", "test.php", 1);
-    // setenv("SCRIPT_FILENAME", scriptName.c_str(), 1);
+    setenv("REQUEST_METHOD", this->req.headers["method"].c_str(), 1);
+    setenv("GATEWAY_INTERFACE","CGI/1.1",1);
+    setenv("PATH_INFO", this->req.headers["uri"].c_str() , 1);
 }
 
 std::string	setCgiFileName(void)
@@ -329,7 +326,7 @@ std::string response::getCgiResponse()
 
     int pipeFd[2];
     int status;
-    char *args[2] = {(char*)this->location.cgi.c_str(), NULL}; // TODO: add second argument PATH_TRANSLATEd
+    char *args[3] = {(char*)this->location.cgi.c_str(),(char*)this->root.c_str(), NULL};
 
     int cgiFileFd = open(this->req.fileName.c_str(), O_RDONLY);
     pipe(pipeFd);
@@ -428,6 +425,7 @@ void    response::set_response_cgi()
 	this->req.resFlag = HEADERSENT;
     this->req.fdBody = open(cgiResponseFile.c_str(),O_RDONLY);
     char buff[position + 1];
+    isFdReady(this->req.fdBody);
     read(this->req.fdBody, buff,position);
 }
 
@@ -867,14 +865,14 @@ bool    response::support_upload()
 			if (is_directory())
 			{
             	cmd = "mv " + file_name + " " + upload_path;
-            	system(cmd.c_str());
+            	system((cmd + " >nul 2>nul").c_str());
 			}
 			else
 			{
             	cmd = "mv " + file_name + " " + this->root;
-            	system(cmd.c_str());
+            	system((cmd + " >nul 2>nul").c_str());
             	cmd = "mv " + this->root + " " + upload_path;
-            	system(cmd.c_str());
+            	system((cmd + " >nul 2>nul").c_str());
 			}
             set_response_page(201);
             return true;
@@ -900,7 +898,7 @@ void    response::delete_folder()
     std::string cmd = "rm -rf " + this->root;
     if(access(this->root.c_str(),R_OK) == 0)
     {
-        system(cmd.c_str());
+        system((cmd + " >nul 2>nul").c_str());
         if(access(this->root.c_str(),F_OK) == 0)
             set_response_page(500);
         else
@@ -914,7 +912,7 @@ void    response::delete_folder()
 void    response::delete_file()
 {
     std::string cmd = "rm -rf " + this->root;
-    system(cmd.c_str());
+    system((cmd + " >nul 2>nul").c_str());
     set_response_page(204);
     return ;
 }
