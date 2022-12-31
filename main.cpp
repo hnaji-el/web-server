@@ -75,9 +75,9 @@ int main(int argc, char** argv)
 	for (size_t i = 0; i < serversSockets.size(); i++)
 	{
 		FD_SET(serversSockets[i], &currentSocketsSet);
-		printf("socket = %d\n", serversSockets[i]);
+		// printf("socket = %d\n", serversSockets[i]);
 	}
-	printf("size = %lu\n", serversSockets.size());
+	// printf("size = %lu\n", serversSockets.size());
 	int max_fd = *std::max_element(serversSockets.begin(), serversSockets.end());
 	RequestMap::iterator tmp;
 	while (1) 
@@ -104,7 +104,7 @@ int main(int argc, char** argv)
 					bzero(buff, BUFF_SIZE + 1);
 					if ((read_n = read(i, buff, BUFF_SIZE)) == 0 || read_n == -1)
 					{
-						std::cout << "read == 0 || -1 " << std::endl;
+						// std::cout << "read == 0 || -1 " << std::endl;
 						closeConnection(i, request, &currentSocketsSet);
 						continue;
 					}

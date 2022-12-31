@@ -28,3 +28,4 @@ h2{
         echo "coucou";
     }
 ?>
+Footer

@@ -10,7 +10,7 @@ void isFdReady(int fd)
 
 void	acceptConnection(RequestMap &request, int &max_fd, fd_set *current_sockets, const int i)
 {
-	std::cout << "CONNECTION" << std::endl;
+	// std::cout << "CONNECTION" << std::endl;
 	const int	conn_fd = accept(i, NULL, NULL);
 	if (fcntl(conn_fd, F_SETFL, O_NONBLOCK) < 0)
 		exit(EXIT_FAILURE);
@@ -40,7 +40,7 @@ bool    sendingResponse(Request & req)
 
 void	closeConnection(int fd, std::map<int, Request> & request ,fd_set *currentSocketsSet)
 {
-	std::cout << "connection with fd " << fd << " is going to be closed" << std::endl;
+	// std::cout << "connection with fd " << fd << " is going to be closed" << std::endl;
 	close(fd);
 	request.erase(fd);
 	FD_CLR(fd, currentSocketsSet);
@@ -70,7 +70,7 @@ int createServerSocket(const ServerData& Data)
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = inet_addr(Data.host.c_str());
     serv_addr.sin_port = htons(Data.port);
-    printf("PORT:%d\n", Data.port);
+    // printf("PORT:%d\n", Data.port);
     if ((bind(sock_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) != 0)
     {
         std::cerr << "bind error " << strerror(errno) << std::endl;

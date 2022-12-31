@@ -341,7 +341,7 @@ std::string response::getCgiResponse()
         dup2(cgiFileFd, 0);
         close(pipeFd[1]);
         execve(args[0], args, environ);
-        std::cerr << "ERROE EXECVE" << std::endl;
+        // std::cerr << "ERROR EXECVE" << std::endl;
         exit(1);
     }
     else
@@ -929,7 +929,7 @@ void    response::DELETE_method()
                 {
                     if(index_files())
                     {
-                        //cgi function.
+                        delete_file();
                     }
                 }
                 else
@@ -938,12 +938,7 @@ void    response::DELETE_method()
         }
         else
         {
-            if(location_has_cgi())
-            {
-                //cgi function.
-            }
-            else
-                delete_file();
+            delete_file();
         }
     }
 }
