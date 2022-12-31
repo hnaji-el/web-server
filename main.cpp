@@ -15,7 +15,7 @@
 #include <unistd.h> 
 #include <sys/types.h>
 
-#define TIME_LIMIT_SEC 1
+#define TIME_LIMIT_SEC 100
 
 size_t  stringToNumber(const std::string& str)
 {
@@ -101,28 +101,32 @@ int main(int argc, char** argv)
 				else
 				{
 					request[i].lastTimeUsed = time(NULL); // if request  still going
-					bzero(buff, BUFF_SIZE);
+					bzero(buff, BUFF_SIZE + 1);
 					if ((read_n = read(i, buff, BUFF_SIZE)) == 0)
 					{
 						std::cout << "read == 0 " << std::endl;
 						closeConnection(i, request, &currentSocketsSet);
 						continue;
 					}
-					request[i](buff);
+					request[i](std::string(buff, read_n));
 				}
 			}
 			if (FD_ISSET(i, &writeSet) && request[i].state == FINISHED)
 			{
 				request[i].lastTimeUsed = time(NULL); // if response  still going
 				if (request[i].resFlag == HEADERNOTSENT)
+				{
 					handle_response(matchServerBlock(cData, request[i]), request[i]);
+				}
 				if (request[i].resState == BODYNOTSENT)
 					sendingResponse(request[i]);
 				if (request[i].resState == BODYSENT)
 				{
 					close(request[i].fdBody); // fdBody initialized
 					if (request[i].headers.count("Connection") == 0 || request[i].headers["Connection"] != "keep-alive")
+					{
 						closeConnection(i, request, &currentSocketsSet);
+					}
 					else
 						request[i].clear();
 				}

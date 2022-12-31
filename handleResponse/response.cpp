@@ -474,7 +474,6 @@ bool    response::request_valid(Request& req,long max_body_size)
         set_response_error(413);
         return false;
     }
-    (void)max_body_size;
     return true;
 }
 
@@ -852,15 +851,31 @@ bool    response::support_upload()
 {
     std::string upload_path = this->location.uploadPath;
     std::string file_name   = this->req.fileName;
+	std::string	cmd;
 
     struct stat buff;
+
+	this->root = this->location.root;
+	if (this->root[this->root.size() - 1] == '/')
+		this->root.erase(this->root.size() - 1, 1);
+	this->root += this->req.headers["uri"];
 
     if(upload_path.length())
     {
         if(lstat(upload_path.c_str(),&buff) == 0 && S_ISDIR(buff.st_mode))
         {
-            std::string cmd = "mv " + file_name + " " + upload_path;
-            system(cmd.c_str());
+			if (is_directory())
+			{
+            	cmd = "mv " + file_name + " " + upload_path;
+            	system(cmd.c_str());
+			}
+			else
+			{
+            	cmd = "mv " + file_name + " " + this->root;
+            	system(cmd.c_str());
+            	cmd = "mv " + this->root + " " + upload_path;
+            	system(cmd.c_str());
+			}
             set_response_page(201);
             return true;
         }
@@ -949,7 +964,7 @@ void    response::POST_method()
                     {
                         if(post_location_has_cgi())
                         {
-                            //cgi function.
+                            set_response_cgi();
                         }
                     }
                 }
@@ -958,7 +973,7 @@ void    response::POST_method()
             {
                 if(post_location_has_cgi())
                 {
-                    //cgi function.
+                	set_response_cgi();
                 }
             }
         }

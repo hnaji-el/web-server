@@ -51,24 +51,24 @@ public:
 	Request&	operator=(const Request& rhs);
 
 	// ENTRY POINT member function
-	void	operator()(const char* chunk);
+	void	operator()(std::string chunk);
 	void	clear(void);
 private:
 	// parse request HEADERS
-	bool	isRequestHeadersComplete(const char* chunk);
+	bool	isRequestHeadersComplete(const std::string& chunk);
 	void	parseRequestHeaders(void);
 	void	parseRequestLine(const size_t lPos);
 	void	parseRequestHeader(const size_t fPos, const size_t lPos);
 
 	// parse request BODY
 	void	parseRequestBodyWithoutEncoding(const std::string& chunk);
-	void	parseRequestBodyWithEncoding(const char* chunk);
+	void	parseRequestBodyWithEncoding(const std::string& chunk);
 	bool	isChunkSizeComplete(void);
 	void	calculateChunkSize(void);
 	void	parseChunkData(void);
 
-	const char*	checkAndSetFlags(void);
-	const char*	setState(State state);
+	std::string	checkAndSetFlags(void);
+	std::string	setState(State state);
 	void		setFileName(void);
 	size_t		stringToNumber(const std::string& str);
 };

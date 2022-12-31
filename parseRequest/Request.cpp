@@ -76,7 +76,28 @@ void	Request::clear(void)
  * ENTRY POINT member function
  */
 
-void	Request::operator()(const char* chunk)
+std::string	Request::checkAndSetFlags(void)
+{
+	if (this->headers["method"] != "POST" || !this->headers.count("Content-Length"))
+		return (this->setState(FINISHED));
+	if (this->headers.count("Transfer-Encoding") &&
+		this->headers["Transfer-Encoding"] != "chunked")
+		return (this->setState(FINISHED));
+
+	this->flag = BODYCHUNKED;
+	if (!this->headers.count("Transfer-Encoding"))
+		this->flag = BODY;
+
+	this->setFileName();
+	this->fileStream.open(this->fileName);
+	this->contentLen = this->stringToNumber(this->headers["Content-Length"]);
+	this->temp = this->buffer.substr(this->pos + 4, std::string::npos);
+	this->buffer.clear();
+
+	return (this->temp);
+}
+
+void	Request::operator()(std::string chunk)
 {
 	if (flag == HEADERS)
 	{
@@ -91,7 +112,7 @@ void	Request::operator()(const char* chunk)
 		this->parseRequestBodyWithEncoding(chunk);
 }
 
-bool	Request::isRequestHeadersComplete(const char* chunk)
+bool	Request::isRequestHeadersComplete(const std::string& chunk)
 {
 	this->buffer += chunk;
 	this->pos = this->buffer.find("\r\n\r\n");
@@ -147,27 +168,6 @@ void	Request::parseRequestHeader(const size_t fPos, const size_t lPos)
 	this->headers[fieldName] = fieldValue;
 }
 
-const char*	Request::checkAndSetFlags(void)
-{
-	if (this->headers["method"] != "POST" || !this->headers.count("Content-Length"))
-		return (this->setState(FINISHED));
-	if (this->headers.count("Transfer-Encoding") &&
-		this->headers["Transfer-Encoding"] != "chunked")
-		return (this->setState(FINISHED));
-
-	this->flag = BODYCHUNKED;
-	if (!this->headers.count("Transfer-Encoding"))
-		this->flag = BODY;
-
-	this->setFileName();
-	this->fileStream.open(this->fileName);
-	this->contentLen = this->stringToNumber(this->headers["Content-Length"]);
-	this->temp = this->buffer.substr(this->pos + 4, std::string::npos);
-	this->buffer.clear();
-
-	return (this->temp.c_str());
-}
-
 void	Request::parseRequestBodyWithoutEncoding(const std::string& chunk)
 {
 	this->fileStream << chunk;
@@ -179,7 +179,7 @@ void	Request::parseRequestBodyWithoutEncoding(const std::string& chunk)
 	}
 }
 
-void	Request::parseRequestBodyWithEncoding(const char* chunk)
+void	Request::parseRequestBodyWithEncoding(const std::string& chunk)
 {
 	this->buffer += chunk;
 
@@ -240,10 +240,10 @@ void	Request::parseChunkData(void)
 	this->chunkState = CHUNKSIZE;
 }
 
-const char*	Request::setState(State state)
+std::string	Request::setState(State state)
 {
 	this->state = state;
-	return (NULL);
+	return ("");
 }
 
 void	Request::setFileName(void)

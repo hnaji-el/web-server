@@ -6,7 +6,7 @@
  */
 
 ServerData::ServerData(void)
-	: host("0.0.0.0"), port(80), autoindex(false), limitSize(1)
+	: host("0.0.0.0"), port(80), autoindex(false), limitSize(1024)
 {
 }
 
