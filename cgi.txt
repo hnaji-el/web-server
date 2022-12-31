@@ -1,0 +1,11 @@
+X-Powered-By: PHP/8.0.2
+Content-type: text/html; charset=UTF-8
+
+<!DOCTYPE html>
+<html>
+<body>
+
+<h1>My KHDSKHfirst PHP page</h1>
+
+hello=hi</body>
+</html>

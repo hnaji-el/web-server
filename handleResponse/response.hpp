@@ -2,6 +2,7 @@
 #ifndef RESPONSE_HPP
 #define RESPONSE_HPP
 
+#include <stdlib.h>
 #include <iostream>
 #include <fstream>
 #include <sys/stat.h>
@@ -16,6 +17,8 @@
 #include <sstream>
 #include "../parseConfigFile/parseConfigFile.hpp"
 #include "../parseRequest/Request.hpp"
+
+extern char **environ;
 
 class response{
     private:
@@ -42,6 +45,7 @@ class response{
         std::string get_content_type(std::string path_file);
         std::string get_error_page(int code);
 
+        typedef std::map<std::string, std::string>				Map;
     public:
         response(const LocationData &location, Request& my_request)
 			: req(my_request), location(location)
@@ -57,6 +61,7 @@ class response{
             message_status.insert(std::make_pair(409,"Conflict"));
             message_status.insert(std::make_pair(500,"Internal Server Error"));
             message_status.insert(std::make_pair(501,"Not Implemented"));
+            message_status.insert(std::make_pair(502,"Bad Gateway"));
             message_status.insert(std::make_pair(200,"OK"));
             message_status.insert(std::make_pair(201,"Created"));
             message_status.insert(std::make_pair(204,"No Content"));
@@ -85,6 +90,13 @@ class response{
         void        set_response_file(int code);
         void        set_response_auto_index(int code,std::string body);
         void        set_response_page(int code);
+        void        set_response_cgi();
+        std::string getCgiResponse();
+        void        setMetaVariables();
+        int         parseCgiOutput(std::string& fileName, Map& headers);
+        void        parseCgiOutputHeader(std::string& buffer, Map& headers);
+
+
 };
 
 

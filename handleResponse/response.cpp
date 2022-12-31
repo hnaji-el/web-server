@@ -1,13 +1,6 @@
 
 #include "response.hpp"
 
-/* ---- TODO ---- 
-    - check contentLen or Content-Length of request.
-    - change contentLen and ActualeLen to public.
-    - location has a cgi.
-    - check error pages 
-*/
-
 std::string to_string(int num)
 {
     std::stringstream stream;
@@ -296,6 +289,135 @@ void    response::set_response_auto_index(int code,std::string body)
 	this->req.resFlag = HEADERSENT;
     write(this->req.fd, data.body.c_str(), data.body.size());
     this->req.resState = BODYSENT;
+}
+
+void response::setMetaVariables()
+{
+    setenv("SERVER_PROTOCOL", "HTTP/1.1", 1);
+    setenv("SERVER_SOFTWARE", "Webserv", 1);
+    setenv("PATH_TRANSLATED", this->root.c_str(), 1);
+    setenv("REDIRECT_STATUS", "200", 1);
+    // setenv("SCRIPT_FILENAME", "index.php" , 1);
+    setenv("CONTENT_LENGTH", to_string(this->req.contentLen).c_str(), 1);
+    setenv("CONTENT_TYPE", this->req.headers["Content-Type"].c_str(), 1);
+    // setenv("REQUEST_METHOD", this->req.headers["method"].c_str(), 1);
+     setenv("QUERY_STRING", this->req.headers["query"].c_str(), 1);
+    // setenv("PATH_INFO", this->req.headers["uri"].c_str() , 1);
+
+
+    // setenv("REDIRECT_STATUS", "200", 1);
+    // setenv("GATEWAY_INTERFACE", "CGI/1.1", 1);
+    // setenv("PATH_INFO", "test.php", 1);
+    // setenv("SCRIPT_FILENAME", scriptName.c_str(), 1);
+}
+
+std::string response::getCgiResponse()
+{
+    setMetaVariables();
+
+    int pipeFd[2];
+    int status;
+    char *args[2] = {(char*)this->location.cgi.c_str(), NULL}; // TODO: add second argument PATH_TRANSLATEd
+
+    int cgiFileFd = open(this->req.fileName.c_str(), O_RDONLY);
+    pipe(pipeFd);
+
+    std::string cgiFileName = "cgi.txt"; // TODO: random naming
+    int pid = fork();
+    if (pid == 0)
+    {
+        this->req.fdBody = open(cgiFileName.c_str(), O_WRONLY  | O_CREAT| O_TRUNC, 0644);
+
+        dup2(this->req.fdBody, 1);
+        dup2(cgiFileFd, 0);
+        close(pipeFd[1]);
+        execve(args[0], args, environ);
+        std::cerr << "ERROE EXECVE" << std::endl;
+        exit(1);
+    }
+    else
+    {
+        close(pipeFd[1]);
+        // waitpid(pid, &status, WNOHANG);
+        wait(&status);// WNOHANG
+        if (WEXITSTATUS(status) == 1) 
+        {
+            return "";
+        }
+        close(cgiFileFd);
+        close(this->req.fdBody);
+    }
+    return cgiFileName;
+}
+
+int response::parseCgiOutput(std::string& fileName, response::Map& headers)
+{
+	std::string		buffer;
+    std::ifstream   fileStream(fileName);
+	std::getline(fileStream, buffer);
+
+	while (buffer.compare("\r"))
+	{
+		parseCgiOutputHeader(buffer, headers);
+		std::getline(fileStream, buffer);
+	}
+    std::cout << "AFTER GET CGI REPONSE" << std::endl;
+    std::streampos	bodyPos = fileStream.tellg();
+	fileStream.seekg(0, std::ios_base::end);
+    if (headers.count("Content-Length") == 0)
+	    headers["Content-Length"] = to_string(fileStream.tellg() - bodyPos);
+	fileStream.close();
+    return bodyPos;
+}
+
+void	response::parseCgiOutputHeader(std::string& buffer, Map& headers)
+{
+	const size_t		lPos = buffer.size() - 1;
+	const size_t		cPos = buffer.find(":", 0);
+	const std::string	fieldName = buffer.substr(0, cPos);
+	const std::string	fieldValue = buffer.substr(cPos + 2, lPos - cPos - 2);
+
+	headers[fieldName] = fieldValue;
+}
+
+void    response::set_response_cgi()
+{
+    response::Map cgiHeaders;
+    std::string cgiResponseFile = getCgiResponse();
+    int position;
+
+    typedef struct data_headers{
+        std::string content_length;
+        std::string  content_type;
+    } data_headers;
+    typedef struct data_response{
+        std::string     request_line;
+        data_headers    headers;
+    } data_response;
+
+    std::string headers;
+    data_response data;
+
+
+    if (cgiResponseFile.empty())
+    {
+        set_response_error(502);
+        return;
+    }
+    position = parseCgiOutput(cgiResponseFile, cgiHeaders);
+
+    data.request_line = "HTTP/1.1 200 OK";
+    data.headers.content_length = cgiHeaders["Content-Length"];
+    data.headers.content_type = cgiHeaders["Content-Type"];
+    
+    headers+= data.request_line + "\r\n" +
+               "Content-Length: " + data.headers.content_length + "\r\n" + "Content-Type: " + data.headers.content_type + 
+               "\r\n\r\n";
+	write(this->req.fd, headers.c_str(), headers.size());
+	this->req.resFlag = HEADERSENT;
+    this->req.fdBody = open(cgiResponseFile.c_str(),O_RDONLY);
+    char buff[position + 1];
+    read(this->req.fdBody, buff,position);
 }
 
 
@@ -843,7 +965,7 @@ void    response::GET_method()
                 {
                     if(location_has_cgi())
                     {
-                        std::cout << "root: " << this->root << std::endl;
+                        set_response_cgi();
                     }
                     else
                         set_response_file(200);
@@ -859,7 +981,7 @@ void    response::GET_method()
         {
             if(location_has_cgi())
             {
-                std::cout << "root: " << this->root << std::endl;
+                set_response_cgi();
             }
             else
                 set_response_file(200);
