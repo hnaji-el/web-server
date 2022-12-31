@@ -15,7 +15,7 @@
 #include <unistd.h> 
 #include <sys/types.h>
 
-#define TIME_LIMIT_SEC 10
+#define TIME_LIMIT_SEC 1
 
 size_t  stringToNumber(const std::string& str)
 {

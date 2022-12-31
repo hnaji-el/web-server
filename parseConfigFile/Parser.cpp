@@ -114,6 +114,8 @@ void	Parser::parserParseLocation(ServerData& serData)
 	this->_numOfCallL.clear();
 
 	this->expectedToken(TOKEN_WORD);
+	if (this->_prevToken.value[0] != '/')
+		throw Failure("webserv: [ERROR]: `location:prefix-string' must be abs_path");
 	serData.location[serData.location.size() - 1].pathname = this->_prevToken.value;
 	this->expectedToken(TOKEN_LPAREN);
 	this->expectedToken(TOKEN_EOL);
