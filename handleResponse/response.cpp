@@ -445,6 +445,10 @@ bool    response::request_valid(Request& req,long max_body_size)
         set_response_error(501);
         return false;
     }
+
+    if(!this->method_allowed(req.headers["method"]))
+        return false;
+
     if(req.headers["method"] == "POST" && req.headers.count("Transfer-Encoding") && req.headers["Transfer-Encoding"] != "chunked")
     {
         set_response_error(501);
@@ -509,12 +513,9 @@ LocationData get_location(ServerData server, Request &my_request)
             {
                 if(server.location[i].pathname == uri)
                     return server.location[i];
-                else
-                {
-                    uri= "";
-                    len--;
-                }
             }
+            uri= "";
+            len--;
         }
         for (size_t i = 0; i < server.location.size(); i++)
         {
@@ -1008,15 +1009,12 @@ void    handle_response(ServerData& server, Request& my_request)
     {
         if(res.check_location_config_file())
         {
-            if(res.method_allowed(res.req.headers["method"]))
-            {
                 if(res.req.headers["method"] == "GET")
                     res.GET_method();
                 if(res.req.headers["method"] == "POST")
                     res.POST_method();
                 if(res.req.headers["method"] == "DELETE")
                     res.DELETE_method();
-            }
         }
     }
 }
